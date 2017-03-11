@@ -29,4 +29,4 @@ fi
    
 
 mkdir out
-cp ./chipod_gust/driver/* ./
+ln ./chipod_gust/driver/* ./
