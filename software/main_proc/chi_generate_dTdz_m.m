@@ -55,7 +55,7 @@ function [Tz_m] = chi_generate_dTdz_m(t1, z1, T1, S1, t2, z2, T2, ...
    dt2 = diff(t2(1:2));
 
    % vertical distance of both sensors in meter
-   dz = abs(z1-z2);
+   dz = nanmean(abs(z1-z2));
 
 %---------------------cal gradient----------------------
    % in case the time series are sampled much quicker then one minute 
@@ -75,6 +75,13 @@ function [Tz_m] = chi_generate_dTdz_m(t1, z1, T1, S1, t2, z2, T2, ...
    S1_int = interp1(t1, S1, time);
    S2_int = interp1(t2, S2, time);
 
+   if length(z1) ~= 1
+       z1 = interp1(t1, z1, time);
+   end
+   if length(z2) ~= 1
+       z2 = interp1(t2, z2, time);
+   end
+
    % cal temperature gradient
    Tz_m.Tz = (T1_int-T2_int)/dz;
    % cal salinity gradient
@@ -90,7 +97,10 @@ function [Tz_m] = chi_generate_dTdz_m(t1, z1, T1, S1, t2, z2, T2, ...
        rho_0    = 1025;
        Tz_m.N2  = -g/rho_0*(D1-D2)/dz;
    else
-       [Tz_m.N2,~,~]  = cal_N2_from_TS(t1, T1,  S1, ones(size(S1))*abs(.5*(z1+z2)), time, Tz_m.Tz, 600);
+       [N2_1,Sz_1,~]  = cal_N2_from_TS(t1, T1,  S1, ones(size(S1))*abs(.5*(z1+z2)), time, Tz_m.Tz, 7200);
+       [N2_2,Sz_2,~]  = cal_N2_from_TS(t2, T2,  S2, ones(size(S1))*abs(.5*(z1+z2)), time, Tz_m.Tz, 7200);
+       Tz_m.N2 = (N2_1 + N2_2)/2;
+       Tz_m.Sz = (Sz_1 + Sz_2)/2;
    end
 
    Tz_m.time  = time;

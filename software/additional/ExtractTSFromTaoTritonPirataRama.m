@@ -69,7 +69,7 @@ function [T1, T2] = ExtractTSFromTaoTritonPirataRama(ChipodLon, ChipodLat, Chipo
     end
 
     disp(['Chipod at ' num2str(ChipodDepth) ' m.']);
-    disp(['Choosing instruments at ' num2str(Tdepth([indexT1 indexT2])', '%dm ')]);
+    disp(['Choosing CTDs at ' num2str(Tdepth([indexT1 indexT2])', '%dm ')]);
 
     T1.time = Ttime(tind(1):tind(2))';
     T1.T = Tfull(indexT1, tind(1):tind(2));
@@ -94,15 +94,15 @@ function [S] = InterpAndFillSalinity(Stime, Svec, Ttime, Tvec)
     end
 end
 
-% find instruments with least amount of missing data within 15m of chipod
+% find instruments with least amount of missing data within 20m of chipod
 % missing data checked over chipod deployment time
 function [index1, index2] = ChooseDepthLevels(var, depth, ChipodDepth)
 
-    index1 = find( (abs(-depth + ChipodDepth) < 7.5) ...
+    index1 = find( (abs(-depth + ChipodDepth) <= 10) ...
                     & (ChipodDepth > depth));
     index1 = ChooseLeastNans(var, index1);
 
-    index2 = find( (abs(-depth + ChipodDepth) < 7.5) ...
+    index2 = find( (abs(-depth + ChipodDepth) <= 10) ...
                     & (ChipodDepth < depth));
     index2 = ChooseLeastNans(var, index2);
 

@@ -31,7 +31,7 @@ close all;
    time_range(1)  = datenum(2000, 1, 1, 0, 0, 0); 
    time_range(2)  = datenum(2030, 1, 1, 0, 0, 0); 
 
-
+   runname = '2017-04-20';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% DO NOT CHANGE BELOW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,7 +47,7 @@ addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routi
 %_____________________set directories______________________    
    here    =   pwd;                % mfiles folder
    basedir =   here(1:(end-6));    % substract the mfile folder
-   savedir =   [basedir 'proc/'];  % directory directory to save data
+   savedir =   [basedir 'proc/' runname '/'];  % directory directory to save data
    unit    = chi_get_unit_name(basedir); % get unit name
 
 if do_mask
@@ -69,7 +69,8 @@ end
 
 %_____________________find all available chi data______________________
 if(do_combine)
-   d = dir([basedir '/proc/chi/']);
+   dirname = [savedir 'chi/'];
+   d = dir(dirname);
    % eliminate directories
    d = d(~[d(:).isdir]);
 
@@ -84,10 +85,26 @@ if(do_combine)
 
          ID = d(i).name(1:mat_test-1);
          disp(['adding ' ID ]);
-         load([basedir '/proc/chi/' ID '.mat'])
+         load([dirname ID '.mat'])
          
          % find desired time range
          iiTrange = find( chi.time>= time_range(1) & chi.time<= time_range(2) );
+
+         ChipodDepth = round(nanmean(chi.depth(iiTrange))); % in metres
+
+         % read in mooring salinity & calculate rho, cp
+         if ~exist('Smean', 'var')
+             try
+                 load ../proc/T_m.mat
+                 Smean = (T1.S .* abs(nanmean(T2.z)-ChipodDepth) ...
+                          + T2.S .* abs(nanmean(T1.z)-ChipodDepth)) ...
+                         ./ abs(nanmean(T1.z)-nanmean(T2.z));
+                 Smean = interp1(T1.time, Smean, chi.time);
+                 chi.S = Smean;
+             end
+             rho = sw_pden(Smean, chi.T, ChipodDepth, 0);
+             cp = sw_cp(Smean, chi.T, ChipodDepth);
+         end
 
          if do_mask
              if mask_dTdz == 'i'
@@ -95,10 +112,10 @@ if(do_combine)
                  Tz.Tz = Tz.(['Tz' ID(7)']);
              end
 
-             Tzmask = interp1(Tz.time, Tz.Tz, chi.time(iiTrange));
+             Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
 
-             percent_mask_dTdz = sum(abs(Tzmask) < min_dTdz)/length(chi.time(iiTrange))*100;
-             percent_mask_N2 = sum(chi.N2 < min_N2)/length(chi.time(iiTrange))*100;
+             percent_mask_dTdz = sum(abs(Tzmask(iiTrange)) < min_dTdz)/length(chi.time(iiTrange))*100;
+             percent_mask_N2 = sum(chi.N2(iiTrange) < min_N2)/length(chi.time(iiTrange))*100;
              percent_mask_inst_spd = sum(chi.spd(iiTrange) < min_inst_spd)/length(chi.time(iiTrange))*100;
              disp([' dTdz will mask ' num2str(percent_mask_dTdz, '%.2f') ...
                    ' % of estimates'])
@@ -121,8 +138,8 @@ if(do_combine)
                  vel = vel_p;
                  disp('masking using pitot speed');
              end
-             spdmask = interp1(vel.time, vel.spd, chi.time(iiTrange));
-             percent_mask_spd = sum(spdmask < min_spd)/length(chi.time(iiTrange))*100;
+             spdmask = interp1(vel.time, vel.spd, chi.time);
+             percent_mask_spd = sum(spdmask(iiTrange) < min_spd)/length(chi.time(iiTrange))*100;
              disp([' speed will mask ' num2str(percent_mask_spd, '%.2f') ...
                    '% of estimates'])
 
@@ -153,30 +170,41 @@ if(do_combine)
                   if strcmp(ff{f},'eps') | strcmp(ff{f},'chi')
                      chi.(ff{f}) = deglitch(chi.(ff{f}), ww, 2,'b');
                   end
-
-
-                  Turb.(ID).(ff{f}) = moving_average( chi.(ff{f})(iiTrange), ww, ww );
                end
             end
-
-         else % IC estimate is already time averaged
-
-            for f = 1:length(ff)  % run through all fields in chi
-               if ( length(chi.(ff{f})) == length(chi.time) )
-                  Turb.(ID).(ff{f}) = chi.(ff{f})(iiTrange);
-               end
-            end
-
          end
 
+         % convert averaging window from seconds to points
+         ww =  round(avgwindow/(diff(chi.time(1:2))*3600*24));
+
+         if isempty(ic_test)
+             % deglitch chi and eps before
+             % calculating Jq and Kt
+             % not required for IC estimate because that is already
+             % an averaged estimate
+             chi.chi = deglitch(chi.chi, ww, 2,'b');
+             chi.eps = deglitch(chi.eps, ww, 2, 'b');
+         end
+
+         chi.Kt = 0.5 * chi.chi ./ chi.dTdz.^2;
+         chi.Jq = -rho .* cp .* chi.Kt .* chi.dTdz;
+
+         % get list of all fields to average
+         ff = fields(chi);
+
+         %% average data
+         disp('Running moving average')
+         for f = 1:length(ff)  % run through all fields in chi
+             if ( length(chi.(ff{f})) == length(chi.time) )
+                 Turb.(ID).(ff{f}) = moving_average( chi.(ff{f})(iiTrange), ww, ww );
+             end
+         end
       end
    end
-
    Turb.do_mask = do_mask;
    Turb.mask_dTdz = mask_dTdz;
    Turb.min_dTdz = min_dTdz;
    Turb.min_spd = min_spd;
-
    Turb.avgwindow = avgwindow;
    Turb.min_inst_spd = min_inst_spd;
    Turb.min_N2 = min_N2;
@@ -208,7 +236,9 @@ if(do_combine)
          };
 
 %_____________________save combined structure______________________
-   save([basedir '/proc/Turb.mat'], 'Turb');
+   save([savedir '/Turb.mat'], 'Turb');
+   system(['ln -s ' savedir '/Turb.mat ' savedir ...
+           '../combined/' runname '.mat']);
 
     
 end
@@ -216,7 +246,7 @@ end
 %_____________________comparison plot______________________
 if do_plot
    
-   load([basedir '/proc/Turb.mat']);
+   load([basedir '/proc/' runname '/Turb.mat']);
    ff = fields(Turb);
    ff = {ff{1:end-1}}'; % remove readme structure
 

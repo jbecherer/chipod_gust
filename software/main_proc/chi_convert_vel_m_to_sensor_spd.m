@@ -27,13 +27,13 @@ if ~exist('use_compass', 'var')
 end
 
 % interplate on common time step
-   u   = interp1(vel_m.time, vel_m.u, data.time, 'linear','extrap');
-   v   = interp1(vel_m.time, vel_m.v, data.time, 'linear','extrap');
-   spd = interp1(vel_m.time, vel_m.spd, data.time, 'linear','extrap');
+   u   = interp1(vel_m.time, vel_m.u, data.time, 'linear', NaN);
+   v   = interp1(vel_m.time, vel_m.v, data.time, 'linear', NaN);
+   spd = interp1(vel_m.time, vel_m.spd, data.time, 'linear', NaN);
 
   if use_compass
       % more sophisticated use compass
-      cmp = angle(interp1(data.time_cmp, exp(1i*data.cmp/180*pi), data.time, 'linear','extrap'));
+      cmp = angle(interp1(data.time_cmp, exp(1i*data.cmp/180*pi), data.time, 'linear', NaN));
 
       velx = u.*sin(cmp) + v.*cos(cmp);
       vely = u.*cos(cmp) + v.*sin(cmp);
