@@ -90,15 +90,16 @@ if(do_combine)
          % find desired time range
          iiTrange = find( chi.time>= time_range(1) & chi.time<= time_range(2) );
 
-         ChipodDepth = round(chi.depth(1)/100); % in metres
+         ChipodDepth = round(nanmean(chi.depth(iiTrange))); % in metres
 
          % read in mooring salinity & calculate rho, cp
          if ~exist('Smean', 'var')
              try
                  load ../proc/T_m.mat
-                 Smean = (T1.S .* abs(T2.z-ChipodDepth) ...
-                          + T2.S .* abs(T1.z-ChipodDepth)) ./ abs(T1.z-T2.z);
-                 Smean = interp1(T1.time, Smean, chi.time(iiTrange));
+                 Smean = (T1.S .* abs(nanmean(T2.z)-ChipodDepth) ...
+                          + T2.S .* abs(nanmean(T1.z)-ChipodDepth)) ...
+                         ./ abs(nanmean(T1.z)-nanmean(T2.z));
+                 Smean = interp1(T1.time, Smean, chi.time);
                  chi.S = Smean;
              end
              rho = sw_pden(Smean, chi.T, ChipodDepth, 0);
@@ -111,10 +112,10 @@ if(do_combine)
                  Tz.Tz = Tz.(['Tz' ID(7)']);
              end
 
-             Tzmask = interp1(Tz.time, Tz.Tz, chi.time(iiTrange));
+             Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
 
-             percent_mask_dTdz = sum(abs(Tzmask) < min_dTdz)/length(chi.time(iiTrange))*100;
-             percent_mask_N2 = sum(chi.N2 < min_N2)/length(chi.time(iiTrange))*100;
+             percent_mask_dTdz = sum(abs(Tzmask(iiTrange)) < min_dTdz)/length(chi.time(iiTrange))*100;
+             percent_mask_N2 = sum(chi.N2(iiTrange) < min_N2)/length(chi.time(iiTrange))*100;
              percent_mask_inst_spd = sum(chi.spd(iiTrange) < min_inst_spd)/length(chi.time(iiTrange))*100;
              disp([' dTdz will mask ' num2str(percent_mask_dTdz, '%.2f') ...
                    ' % of estimates'])
@@ -137,8 +138,8 @@ if(do_combine)
                  vel = vel_p;
                  disp('masking using pitot speed');
              end
-             spdmask = interp1(vel.time, vel.spd, chi.time(iiTrange));
-             percent_mask_spd = sum(spdmask < min_spd)/length(chi.time(iiTrange))*100;
+             spdmask = interp1(vel.time, vel.spd, chi.time);
+             percent_mask_spd = sum(spdmask(iiTrange) < min_spd)/length(chi.time(iiTrange))*100;
              disp([' speed will mask ' num2str(percent_mask_spd, '%.2f') ...
                    '% of estimates'])
 
@@ -192,6 +193,7 @@ if(do_combine)
          ff = fields(chi);
 
          %% average data
+         disp('Running moving average')
          for f = 1:length(ff)  % run through all fields in chi
              if ( length(chi.(ff{f})) == length(chi.time) )
                  Turb.(ID).(ff{f}) = moving_average( chi.(ff{f})(iiTrange), ww, ww );
