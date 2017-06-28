@@ -17,7 +17,8 @@ close all;
    min_dTdz = 1e-4;
    min_spd = 0.05;
    min_inst_spd = min_spd; % min instantaneous speed past sensor
-   mask_dTdz = 'i'; % 'm' for mooring, 'i' for internal
+   mask_dTdz = 'i'; % '' for none, 'm' for mooring, 'i' for internal
+                    % in addition to whats in chi.dTdz
    mask_inst_spd = 1; % estimates are crappy if sensor isn't moving
                       % enough.
                       % screws the spectrum calculation...
@@ -66,16 +67,18 @@ addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routi
 
 if do_mask
     if mask_dTdz == 'm'
-        disp('masking using mooring dTdz')
+        disp('additional masking using mooring dTdz')
         load([basedir 'input/dTdz_m.mat'])
         Tz = Tz_m;
         clear Tz_m;
 
     elseif mask_dTdz == 'i'
-        disp('masking using internal dTdz')
+        disp('additional masking using internal dTdz')
         load([basedir 'input/dTdz_i.mat'])
         Tz = Tz_i;
         clear Tz_i;
+    else
+        Tz = [];
     end
 
     mask_spd_initial = mask_spd;
@@ -120,17 +123,10 @@ if(do_combine)
          end
 
          if do_mask
-             if mask_dTdz == 'i'
-                 % choose appropriate internal stratification for sensor
-                 Tz.Tz = Tz.(['Tz' ID(7)']);
-             end
-
-             Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
-
-             percent_mask_dTdz = sum(abs(Tzmask(iiTrange)) < min_dTdz)/length(chi.time(iiTrange))*100;
+             percent_mask_Tz = sum(abs(chi.dTdz(iiTrange)) < min_dTdz)/length(chi.time(iiTrange))*100;
              percent_mask_N2 = sum(chi.N2(iiTrange) < min_N2)/length(chi.time(iiTrange))*100;
              percent_mask_inst_spd = sum(chi.spd(iiTrange) < min_inst_spd)/length(chi.time(iiTrange))*100;
-             disp([' dTdz will mask ' num2str(percent_mask_dTdz, '%.2f') ...
+             disp([' Tz will mask ' num2str(percent_mask_Tz, '%.2f') ...
                    ' % of estimates'])
              disp([' N2 will mask ' num2str(percent_mask_N2, '%.2f') ...
                    ' % of estimates'])
@@ -156,15 +152,31 @@ if(do_combine)
              disp([' speed will mask ' num2str(percent_mask_spd, '%.2f') ...
                    '% of estimates'])
 
-             full_mask = (abs(Tzmask) < min_dTdz) ...
+             full_mask = (abs(chi.dTdz) < min_dTdz) ...
                  | (chi.N2 < min_N2) ...
                  | (chi.spd < min_inst_spd) ...
                  | (spdmask < min_spd);
+
+             if ~isempty(Tz) % additional Tz masking?
+                 if mask_dTdz == 'i'
+                     % choose appropriate internal stratification for sensor
+                     Tz.Tz = Tz.(['Tz' ID(7)']);
+                 end
+
+                 Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
+                 percent_mask_dTdz = sum(abs(Tzmask(iiTrange)) < min_dTdz)/ ...
+                     length(chi.time(iiTrange))*100;
+                 disp([' dTdz_' mask_dTdz ' will mask ' num2str(percent_mask_dTdz, '%.2f') ...
+                       ' % of estimates'])
+
+                 full_mask = full_mask | (abs(Tzmask) < min_dTdz);
+             end
          end
 
          % NaN out some chi estimates based on min_dTz, min_spd
          if do_mask
              chi.chi(full_mask) = NaN;
+             chi.eps(full_mask) = NaN;
              chi.mask = chi.mask | ~full_mask;
          end
 
