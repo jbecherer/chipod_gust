@@ -22,6 +22,11 @@ close all;
    use_TS_relation = 0; % fit TS relation to estimate N2 from
                         % mooring data? Use (with caution) when you
                         % have only 1 salinity sensor
+   modify_header = 0;   % if 1, specify header corrections below
+
+   % declination - get values from https://www.ngdc.noaa.gov/geomag-web/#declination
+   DeployDecl = 0; % at deployment location
+   CorvallisDecl = 15+44/60; % at corvallis
 
 %_____________________include path of processing flies______________________
 addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routines
@@ -55,6 +60,60 @@ addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routi
 
         % chipod location (positive North, East & Down)
         ChipodLon = 90; ChipodLat = 12; ChipodDepth = 15;
+    end
+
+%_______________create header files if necessary______________________
+
+   % will create header.mat file if necessary
+   % if header.mat exists, it will read it
+   head = chi_get_calibration_coefs(basedir);
+
+   % will create header.mat file if necessary
+   % if header_p.mat exists, it will read it
+   W  = chi_get_calibration_coefs_pitot(basedir);
+
+%_____________________make header corrections if necessary______________
+
+    if modify_header
+
+        % _____usual calibrations______
+        % head.coef.CMP(1) = 0;
+        % save header in proper destination
+        % fid = [basedir filesep 'calib' filesep 'header.mat'] ;
+        % save(fid, 'head');
+
+        % _____pitot calibrations______
+        % W.T  = [0 -0.003154669 0 0 0];
+        % W.Ps = [0 0 0 0 0]; % pressure sensor is bad; accounted for in offset
+        % W.Tilt = [0 0.000088684 0 0 0];
+        % W.Pd = [0 0.0003995 0 0 0]; %if slope>1 else W.Pd = [0 slope 0 0 0];
+        % assert(W.Pd(2) < 1, 'WPd(2) > 1 !');
+        % % offsets
+        % W.V0 = 0;
+        % W.P0 = 0;
+        % W.T0 = 0;
+        % save header in proper destination
+        % fid = [basedir filesep 'calib' filesep 'header_p.mat'] ;
+        % save(fid, 'W');
+
+    end
+
+%_____________________account for declination__________________________
+
+    [~, headtest] = raw_load_chipod([basedir filesep 'raw' filesep fids{1}]);
+
+    % if these are equal, declination correction hasn't been made yet
+    if isequal(head.coef.CMP(1), headtest.coef.CMP(1))
+        disp('accounting for declination ...');
+        % chi_calibrate_chipod adds head.coef.CMP(1) to raw_data.CMP/10
+        % hence, we need to change sign here.
+        head.coef.CMP(1) = -head.coef.CMP(1) - CorvallisDecl + DeployDecl;
+        fid = [basedir filesep 'calib' filesep 'header.mat'] ;
+        save(fid, 'head');
+    else
+        if isequal(head.coef.CMP(1), -headtest.coef.CMP(1) - CorvallisDecl + DeployDecl)
+            disp('declination has already been accounted for.')
+        end
     end
 
 %%%%%%%%%%%%%%%%%%% temp processing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
