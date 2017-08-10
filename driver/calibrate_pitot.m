@@ -10,15 +10,20 @@ close all;
 
 %_____________________set processing flags______________________
    do_parallel = 0;     % use paralelle computing 
-   do_raw_data = 0;     % do the averagring of the raw-data (1) or skip (0) if done before 
+   do_raw_data = 0;     % do the averaging of the raw-data (1) or skip (0) if done before
    do_v0_self  = 0;     % detremine V0 based on a min of the averaged signal (self contained)
    do_v0_adcp  = 0;     % detremin V0 based on a fit against reference velocity (adcp) data
    do_plot     = 0;     % generate some figures in ../pics/ to compare the different velocity estimates
 
-   % if you want to restrict the time range that should be analyzed use the following
-   time_range(1)  = datenum(2000, 1, 1, 0, 0, 0); 
-   time_range(2)  = datenum(2030, 1, 1, 0, 0, 0); 
+   % This is the time range where the pitot sensor is returning
+   % good data
+   time_range(1)  = datenum(2000, 1, 1, 0, 0, 0);
+   time_range(2)  = datenum(2030, 1, 1, 0, 0, 0);
 
+   % calibrate in time range different from valid data time range?
+   % if so set limits here just as for time_range.
+   % by default, both time ranges are equal.
+   cal_time_range = time_range;
 
    % which temperature sensor to use T1 (1) or if T1 is broken T2 (2) ;  
    % for gusTs (0)
@@ -29,10 +34,6 @@ close all;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% DO NOT CHANGE BELOW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
 
 
 %_____________________include path of processing files______________________
@@ -73,52 +74,17 @@ addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routi
          disp('... And we recalculate V0');
          save([hfid '.backup'], 'W');
       end
-      
-%_____________________average all Pitot raw data to 10 min bins______________________
 
-if do_raw_data
-
-      disp('averaging Pitot raw  data in ./proc/Praw.mat ')
-      % init parallel pool
-      if(do_parallel)
-         parpool;
-         % parallel for-loop
-         parfor f=1:length(fids)
-           try % take care if script crashes that the parpoo is shut down
-               disp(['calculating file ' num2str(f) ' of ' num2str(length(fids))]);
-
-               if use_T == 0 % gusT
-                  [~] = pitot_avg_raw_data(basedir, fids{f}, 0);
-               else        %chipod
-                  [~] = pitot_avg_raw_data(basedir, fids{f});
-               end
-           catch
-               disp(['!!!!!! ' fids{f} ' crashed while processing vel_p structure !!!!!!' ]);
-            end
-         end
-         % close parpool
-         delete(gcp);
-      else
-         for f=1:length(fids)
-            disp(['calculating file ' num2str(f) ' of ' num2str(length(fids))]);
-               if use_T == 0 % gusT
-                  [Praw] = pitot_avg_raw_data(basedir, fids{f}, 0);
-               else        %chipod
-                  [Praw] = pitot_avg_raw_data(basedir, fids{f});
-               end
-         end
+      if do_raw_data
+          do_raw_pitot;
       end
-   %_____________________merge individual files______________________
-      chi_merge_and_avg(basedir, 'Praw', 0);
-end
-
 %_____________________load averaged raw data and do basic calibration______________________
    fid = ['../proc/Praw.mat'];
    if exist(fid, 'file');
       load(fid);
    else
       disp(['The raw data are not processed yet you need to set']);
-      disp('do_raw_data = 1;')
+      disp('do_raw_data = 1; or run do_raw_pitot.m')
    end
    %--------------------base calibation----------------------
    P.time = Praw.time;
@@ -149,11 +115,12 @@ end
 
    %---------------------pre calibration for Pitot----------------------
       %% find all idexes in the desired time interval;
+      iiPcal = find( P.time>=cal_time_range(1) & P.time<=cal_time_range(2) );
       iiP = find( P.time>=time_range(1) & P.time<=time_range(2) );
 
    % set the average temperature as reference value for the Pitot calibration
-   W.T0   =  nanmean(P.T(iiP));
-   W.P0   =  nanmean(P.P(iiP));
+   W.T0   =  nanmean(P.T(iiPcal));
+   W.P0   =  nanmean(P.P(iiPcal));
 
    % calibrate the Pitot voltage for temperature (pressure ? Tilt ?)
    P.W   =   Praw.W - (P.T-W.T0)*W.T(2);
@@ -164,9 +131,8 @@ end
 Porg = P;
 if do_v0_self
 
-
-   % calculate V0 as the median of the smalles 5 % of the averaged values
-      w_sort = sort(P.W(iiP));
+   % calculate V0 as the median of the smallest 5 % of the averaged values
+      w_sort = sort(P.W(iiPcal));
       W.V0 = median(w_sort(1:round(length(w_sort)/20)));
 
    % calibrate voltage into speeds
@@ -181,7 +147,7 @@ if do_v0_self
    W
    
    if do_plot
-      figure
+       CreateFigure;
          a=1;
          ax(a) = subplot(3,1,a);
             plot(ax(a), P.time, P.T, 'Linewidth', 1);
@@ -208,6 +174,7 @@ if do_v0_self
             datetick(ax(a), 'keeplimits');
 
             linkaxes(ax, 'x');
+            xlim(ax(1), time_range)
             
    end
 
@@ -234,12 +201,11 @@ if do_v0_adcp
 
    %% find all idexes in the desired time interval;
       % adcp
-      iiA = find( vel_m.time>=P.time(iiP(1)) &  vel_m.time<=P.time(iiP(end)) );
-
+      iiA = find( vel_m.time>=P.time(iiPcal(1)) &  vel_m.time<=P.time(iiPcal(end)) );
 
    % determine V0
-       [W.V0] = fit_pitot_v0( vel_m.time, vel_m.spd, P.time(iiP), P.W(iiP), 1/W.Pd(2), 0);
-   
+       [W.V0] = fit_pitot_v0( vel_m.time, vel_m.spd, P.time(iiPcal), P.W(iiPcal), 1/W.Pd(2), do_plot);
+       if do_plot, print(gcf, '../pics/pitot-adcp-fit-voltages.png', '-dpng', '-r200', '-painters'); end
    % calibrate voltage into speeds
    [P.spd, ~, ~] = pitot_calibrate(P.W, P.T, 0, W.V0, W.T0, 0, 1/W.Pd(2), 0, 0);
 
@@ -268,22 +234,6 @@ if do_v0_adcp
    disp('The direction off set between ADCP and Chipod is');
    disp([num2str( D_off ) ' deg']);
 
-   if abs(D_off)>2 % Ask if the chipod header should be changed
-         choice = questdlg(['I found a direction off set between chipod and ADCP of ' num2str( D_off ) ' deg.' ...
-                           ' Do you want me to change the compass off set in the chipod header?'], ...
-                           'Compass off set', ...
-                            'Yes','No','No');
-         switch choice 
-            case 'Yes'
-               head.coef.CMP(1) = head.coef.CMP(1) + D_off;
-               save('../calib/header.mat', 'head');
-               disp('Chipod header changed!')
-            case 'No'
-               disp('Chipod header NOT changed!')
-         end
-               
-   end
-
    if do_plot
       % generate a comparison plot
       a_L    = 'ADCP';
@@ -306,3 +256,29 @@ if (do_v0_adcp & do_v0_self & do_plot)
       [fig] =  compare_velocity_timeseries(Pf.P.time, Pf.P.U, a_L, Ps.P.time, Ps.P.U, p_L);
       print(gcf,'../pics/V0_fit_vs_self.png','-dpng','-r200','-painters')
 end
+
+%___________________generating Pitot velocity input_________________
+fidf = '../proc/P_fit.mat';
+fids = '../proc/P_self.mat';
+
+if exist(fidf, 'file');
+    load(fidf);
+    vel_p.text = 'vel_p.mat is generated based on the ADCP fitted Pitot signal';
+    disp(vel_p.text);
+elseif exist(fids, 'file');
+    load(fids);
+    vel_p.text = 'vel_p.mat is generated in the self contained way';
+    disp(vel_p.text);
+else
+    error(['Pitot velocities have not been calibrated yet!. Run with do_v0_adcp = 1 ' ...
+           'or do_v0_self = 1 first!']);
+end
+
+vel_p.time  = P.time;
+vel_p.spd   = P.spd;
+vel_p.U     = P.U;
+vel_p.u     = real(P.U);
+vel_p.v     = imag(P.U);
+
+save('../input/vel_p.mat', 'vel_p');
+disp('vel_p.mat created!')

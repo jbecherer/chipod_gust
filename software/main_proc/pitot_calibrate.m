@@ -42,4 +42,6 @@ Vcal = Vraw - (T-T0)*ST - (P-P0)*SP - V0;
 Pdym = Vcal*Sp;
 spd    = sign(Pdym).*sqrt(2/1025*abs(Pdym)); 
 % remove negative values
-spd(Pdym<0) = 0; 
+% setting to NaN means that the rose diagrams and histograms are more
+% meaningful.
+spd(Pdym<0) = NaN;

@@ -38,17 +38,18 @@ close all;
    time_range(1)  = datenum(2000, 1, 1, 0, 0, 0);
    time_range(2)  = datenum(2030, 1, 1, 0, 0, 0);
 
-   % if on chipod one sensor dies earlier, specify that time here.
-   T1death = datenum(2060, 1, 1, 0, 0, 0);
-   T2death = datenum(2060, 1, 1, 0, 0, 0);
+   % if one sensor dies earlier, specify that time here.
+   T1death = datenum(2060, 1, 1, 0, 0, 0); % chipod T1 or gustT T sensor
+   T2death = datenum(2060, 1, 1, 0, 0, 0); % T2 sensor
 
    % additional time ranges to NaN out as necessary
    % make an array that looks like
    % nantimes{sensor_number} = [start_time1, end_time1;
    %                            start_time2, end_time2;]
    % start_time & end_time must be datenum
-   nantimes{1} = [];
-   nantimes{2} = [];
+   nantimes{1} = []; % sensor T1 for chipod or T sensor on gusT
+   nantimes{2} = []; % sensor T2 for chipod
+   nantimes{3} = []; % pitot sensor
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% DO NOT CHANGE BELOW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -121,6 +122,12 @@ if(do_combine)
              sensor = 1; % gusT has only one sensor
          end
 
+         if ~isempty(strfind(ID, 'p'))
+             isPitotEstimate = 1;
+         else
+             isPitotEstimate = 0;
+         end
+
          disp(' ');
          disp(['----------> adding ' ID ]);
          load([basedir '/proc/chi/' ID '.mat'])
@@ -147,17 +154,17 @@ if(do_combine)
          rho = sw_pden(Smean, chi.T, ChipodDepth, 0);
          cp = sw_cp(Smean, chi.T, ChipodDepth);
 
-         % NaN out after sensor death
-         if isChipod
-             if sensor == 1 % sensor T1
-                 death = find(chi.time > T1death, 1, 'first');
-                 if ~isempty(death)
-                     disp(['NaNing out sensor T1 after it died on ' datestr(T1death)])
-                     chi.chi(death:end) = NaN;
-                     chi.eps(death:end) = NaN;
-                 end
+         %___________________NaN out after sensor death______________________
+         if sensor == 1 % sensor T1 or gusT T
+             death = find(chi.time > T1death, 1, 'first');
+             if ~isempty(death)
+                 disp(['NaNing out sensor T1 after it died on ' datestr(T1death)])
+                 chi.chi(death:end) = NaN;
+                 chi.eps(death:end) = NaN;
              end
+         end
 
+         if isChipod
              if sensor == 2 % sensor T2
                  death = find(chi.time > T2death, 1, 'first');
                  if ~isempty(death)
@@ -168,7 +175,8 @@ if(do_combine)
              end
          end
 
-         % NaN out specific time ranges as necessary
+         %____________________NaN out specific time ranges as necessary____________
+         % for temp sensor
          if ~isempty(nantimes{sensor})
              for tt = 1:size(nantimes{sensor}, 1)
                  chi.chi(find_approx(chi.time, nantimes{sensor}(tt, 1), 1): ...
@@ -176,6 +184,15 @@ if(do_combine)
              end
              chi.eps(isnan(chi.chi)) = NaN;
          end
+
+         if isPitotEstimate & ~isempty(nantimes{3})
+              for tt = 1:size(nantimes{3}, 1)
+                 chi.chi(find_approx(chi.time, nantimes{3}(tt, 1), 1): ...
+                         find_approx(chi.time, nantimes{3}(tt, 2), 1)) = NaN;
+             end
+             chi.eps(isnan(chi.chi)) = NaN;
+         end
+
 
          chi.Kt = 0.5 * chi.chi ./ chi.dTdz.^2;
          chi.Jq = -rho .* cp .* chi.Kt .* chi.dTdz;

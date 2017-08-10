@@ -37,10 +37,29 @@ v0 = nanmean(tmp_v0);
 
 %---------------------plot if requested----------------------
 if do_plot
-   figure
+    CreateFigure;
+    set(gcf, 'DefaultLineLineWidth', 1);
+    ax(1) = subplot(211);
       plot(p_time, tmp_v0);
          hold all;
          xl = get(gca,'Xlim');
       plot(xl, [1 1]*v0);
+      legend('pitot volt - ref. spd. volt', 'inferred V_0')
+      xlim([nanmin(p_time) nanmax(p_time)])
+      datetick('keeplimits')
+      title('determine V_0 by fitting to ADCP')
+
+   ax(2) = subplot(212);
+   hold on;
+   plot(p_time, .5*1025/s_pd*p_ref_spd.^2);
+   plot(p_time, p_v_cal - v0);
+   plot(get(gca, 'XLim'), [0 0], '--', 'color', [1 1 1]*0.6)
+   xlim([nanmin(p_time) nanmax(p_time)])
+   title(['num(negative speeds) = ' num2str(sum(p_v_cal-v0 < 0))])
+   legend('pitot calibrated voltage', 'ref spd converted to voltage', ...
+          'pitot calibrated voltage with offset correction')
+   datetick('keeplimits')
+
+   linkaxes(ax, 'x')
 end
 
