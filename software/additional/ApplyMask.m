@@ -6,6 +6,8 @@ function [chi] = ApplyMask(chi, maskvar, relation, criterion, maskname, Trange)
         mask = maskvar > criterion;
     elseif relation == '<'
         mask = maskvar < criterion;
+    elseif relation == '='
+        mask = maskvar == criterion;
     end
 
     numnans = sum(isnan(chi.chi(Trange)));
