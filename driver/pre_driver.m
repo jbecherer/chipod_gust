@@ -21,7 +21,8 @@ close all;
    use_TS_relation = 0; % fit TS relation to estimate N2 from
                         % mooring data? Use (with caution) when you
                         % have only 1 salinity sensor
-   modify_header = 0;   % if 1, specify header corrections below
+   modify_header = 1;   % if 1, specify header corrections below
+                        % (e.g. declination)
 
    % declination - get values from https://www.ngdc.noaa.gov/geomag-web/#declination
    DeployDecl = 0; % at deployment location

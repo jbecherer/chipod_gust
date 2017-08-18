@@ -11,10 +11,10 @@ do_parallel = 0;     % use paralelle computing
 do_raw_proc = 0;     % do the raw data processing 
 do_plot     = 1;     % generate a over view plot 
 
-time_range = [datenum(2013, 11, 29, 16, 0, 0) ...
-              datenum(2014, 9, 15, 18, 0, 0)];
+time_range = [datenum(2000, 1, 1, 0, 0, 0) ...
+              datenum(2060, 1, 1, 0, 0, 0)];
 
-dtind = 600; % every 10 minutes
+dtind = 600; % every 10 minutes, assuming 1 second estimates
 
 %_____________________include path of processing flies______________________
 addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routines
