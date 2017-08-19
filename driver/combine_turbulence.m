@@ -320,10 +320,17 @@ if(do_combine)
              tic;
              for f = 1:length(ff)  % run through all fields in chi
                  if ( length(chi.(ff{f})) == length(chi.time) )
+                     if strcmpi(ff{f}, 'Kt') | strcmpi(ff{f}, 'Jq'), continue; end
                      Turb.(ID).(ff{f}) = moving_average( chi.(ff{f}), ww, ww );
                  end
              end
              toc;
+
+             % recalculate using averaged quantities
+             % if we average over a time period greater than
+             % sampling period of dTdz, this estimate will differ!
+             Turb.(ID).Kt = 0.5 * Turb.(ID).chi ./ Turb.(ID).dTdz.^2;
+             Turb.(ID).Jq = -1025 .* 4200 .* Turb.(ID).Kt .* Turb.(ID).dTdz;
          else
              Turb.(ID) = chi;
          end
