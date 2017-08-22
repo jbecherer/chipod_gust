@@ -429,13 +429,16 @@ if do_plot
          a=3;
          for f = 1:length(ff)
             if ~isstruct(Turb.(ff{f})) == 1, continue; end
-            pj = f; p(pj) = plot(ax(a), Turb.(ff{f}).time, Turb.(ff{f}).N2, 'color', [col(pj,:) 1], 'Linewidth', 1);
+            pj = f; p(pj) = plot(ax(a), Turb.(ff{f}).time, Turb.(ff{f}).dTdz, 'color', [col(pj,:) 1], 'Linewidth', 1);
          end
-         t = text_corner(ax(a), ['N^2 [s^{-2}]'], 1);
-         set(ax(a), 'Yscale', 'log');
-         yl = [1e-6 1e-2];
+         t = text_corner(ax(a), ['dTdz [C/m]'], 1);
+         yl = [-1e-1, 0.3];
          ylim(ax(a), yl);
-         
+         set(ax(a), 'XTickLabels', [])
+         plot(ax(a), xlim ,[0 0], 'k--')
+         axes(ax(a))
+         symlog('y', -3);
+
 
          a=4;
          for f = 1:length(ff)
@@ -448,8 +451,7 @@ if do_plot
          ylim(ax(a), yl);
 
          linkaxes(ax, 'x');
-         
-            
+
    %---------------------histogram plots----------------------
       squeeze_axes(ax, .8, 1)
 
