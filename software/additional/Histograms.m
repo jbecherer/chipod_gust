@@ -1,6 +1,8 @@
 function Histograms(chi, hfig, normstr, legstr)
 
     figure(hfig)
+    hfig.Position(3) = 2000;
+    set(hfig, 'DefaultLegendBox', 'off')
 
     subplot(221);
     set(gca, 'color', 'none')
@@ -33,7 +35,16 @@ end
 
 function myhist(var, normstr, legstr)
     nbins = ceil(sqrt(numel(var)));
+    legstr = getstats(var, legstr);
     histogram(log10(var), nbins, 'normalization', normstr, ...
               'displayname', legstr, ...
-              'displaystyle', 'stairs', 'LineWidth', 1.5)
+              'displaystyle', 'stairs', 'LineWidth', 1.5);
+    legend('-dynamiclegend');
+end
+
+function str = getstats(var, strin)
+
+    str = [' | \mu=' num2str(nanmean(var), '%.1e')];
+    str = [str ', mdn=' num2str(nanmedian(var), '%.1e')];
+    str = [strin str];
 end

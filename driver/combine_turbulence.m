@@ -264,7 +264,7 @@ if(do_combine)
              end
 
              chi = ApplyMask(chi, abs(chi.dTdz), '<', min_dTdz, 'Tz');
-             if do_plot, Histograms(chi, hfig, normstr, 'Tz'); end
+             if do_plot, Histograms(chi, hfig, normstr, ['Tz > ' num2str(min_dTdz, '%.1e')]); end
 
              chi = ApplyMask(chi, chi.N2, '<', min_N2, 'N2');
              if do_plot, Histograms(chi, hfig, normstr, 'N2'); end
@@ -285,9 +285,8 @@ if(do_combine)
              end
 
              if do_plot
-                 Histograms(chi, hfig, normstr, 'all masks');
-
                  figure(hfig)
+                 set(hfig, 'DefaultLegendBox', 'off');
                  subplot(221); legend(gca, 'show'); title(ID(5:end));
                  subplot(222); legend(gca, 'show'); title(ID(5:end));
                  subplot(223); legend(gca, 'show'); title(ID(5:end));
@@ -345,7 +344,7 @@ if(do_combine)
 
    if do_plot
        figure(hfig2)
-       subplot(221); legend(gca, 'show'); title(['Final ' num2str(avgwindow/60) ' min mean']);
+       subplot(221); title(['Final ' num2str(avgwindow/60) ' min mean']);
        subplot(222); title(['Final ' num2str(avgwindow/60) ' min mean']);
 
        print(gcf,['../pics/histograms-final.png'],'-dpng','-r200','-painters')
