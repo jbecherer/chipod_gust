@@ -40,6 +40,10 @@ function [moor] = ExtractUVFromTaoTritonPirataRama(ChipodLon, ChipodLat, ChipodD
         tind(2) = length(moor.time);
     end
 
+    if tind(1) == tind(2)
+        error('No velocity data during deployment!');
+    end
+
     moor.u = squeeze(ncread(fname, 'U_320'))/100; moor.u(abs(moor.u) > 10) = NaN;
     moor.v = squeeze(ncread(fname, 'V_321'))/100; moor.v(abs(moor.v) > 10) = NaN;
 
