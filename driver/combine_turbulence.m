@@ -263,11 +263,15 @@ if(do_combine)
                  savefig(gcf,['../pics/velocity-masking-' ID(5:end) '.fig'])
              end
 
-             chi = ApplyMask(chi, abs(chi.dTdz), '<', min_dTdz, 'Tz');
-             if do_plot, Histograms(chi, hfig, normstr, ['Tz > ' num2str(min_dTdz, '%.1e')]); end
+             [chi, percentage] = ApplyMask(chi, abs(chi.dTdz), '<', min_dTdz, 'Tz');
+             perlabel = [' -' num2str(percentage, '%.1f') '%'];
+             if do_plot, Histograms(chi, hfig, normstr, ['|Tz| > ' num2str(min_dTdz, '%.1e') perlabel]); end
 
-             chi = ApplyMask(chi, chi.N2, '<', min_N2, 'N2');
-             if do_plot, Histograms(chi, hfig, normstr, 'N2'); end
+             [chi, percentage] = ApplyMask(chi, chi.N2, '<', min_N2, 'N2');
+             if percentage > 0.5
+                 perlabel = [' -' num2str(percentage, '%.1f') '%'];
+                 if do_plot, Histograms(chi, hfig, normstr, ['N2' perlabel]); end
+             end
 
              chi = ApplyMask(chi, chi.spd, '<', min_inst_spd, 'inst speed');
              chi = ApplyMask(chi, spdmask, '<', min_spd, 'background flow');
@@ -280,8 +284,10 @@ if(do_combine)
                  end
 
                  Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
-                 chi = ApplyMask(chi, abs(Tzmask), '<', 1e-4, ...
-                                 ['Additional Tz_' mask_dTdz]);
+                 [chi, percentage] = ApplyMask(chi, abs(Tzmask), '<', 1e-4, ...
+                                               ['Additional Tz_' mask_dTdz]);
+                 perlabel = [' -' num2str(percentage, '%.1f') '%'];
+                 if do_plot, Histograms(chi, hfig, normstr, ['Additional Tz_' mask_dTdz perlabel]); end
              end
 
              if do_plot

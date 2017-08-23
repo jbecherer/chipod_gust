@@ -1,4 +1,4 @@
-function [chi] = ApplyMask(chi, maskvar, relation, criterion, maskname, Trange)
+function [chi, percentage] = ApplyMask(chi, maskvar, relation, criterion, maskname, Trange)
 
     if ~exist('Trange', 'var'), Trange = 1:length(chi.chi); end
 
@@ -16,10 +16,9 @@ function [chi] = ApplyMask(chi, maskvar, relation, criterion, maskname, Trange)
     chi.mask = isnan(chi.chi);
 
     numnewnans = sum(isnan(chi.chi(Trange)));
-
+    percentage = (numnewnans-numnans)/ length(Trange)*100;
     disp([maskname ' ' relation ' ' num2str(criterion, '%1.1e') ...
-          ' NaN-ed out ' num2str((numnewnans-numnans)/ ...
-                                 length(Trange)*100, '%.2f') ...
+          ' NaN-ed out ' num2str(percentage, '%.2f') ...
           '% of estimates'])
 
 end
