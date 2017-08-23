@@ -25,6 +25,7 @@ function [] = DebugPlots(hfig, t0, t1, chi, name, ww)
     plot(xlim, [0, 0], 'k--');
     ylabel('dT/dz')
     Common()
+    symlog(gca, 'y', 5e-3);
 
     ax(3) = subplot(513);
     try

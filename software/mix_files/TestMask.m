@@ -1,7 +1,18 @@
-function [] = TestMask(chi, mask_var, mask_sign, mask_vals, name)
+function [] = TestMask(chi, mask_var, mask_sign, mask_vals, name, t0, t1)
+
+    if exist('t0', 'var')
+        ff = fieldnames(chi);
+        i0 = find_approx(chi.time, t0);
+        i1 = find_approx(chi.time, t1);
+
+        for f=1:length(ff)
+            chi.(ff{f}) = chi.(ff{f})(i0:i1);
+        end
+    end
+
+    chiold = chi;
 
     hfig = CreateFigure;
-    chiold = chi;
     Histograms(chi, hfig, 'count', 'raw');
     for ii=1:length(mask_vals)
         chi = ApplyMask(chi, mask_var, mask_sign, mask_vals(ii), name);
