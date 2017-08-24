@@ -203,6 +203,17 @@ if(do_combine)
 
              if ~exist('hfraw', 'var'), hfraw = CreateFigure; end
              Histograms(chi, hfraw, 'pdf', ID(5:end));
+
+             clear hfstrat
+             if ~exist('hfstrat', 'var')
+                 hfstrat = CreateFigure;
+                 shown_Tz = '';
+             end
+
+             if isempty(strfind(shown_Tz, ID(6)))
+                 StratHist(hfstrat, chi, ID)
+                 shown_Tz = [shown_Tz ID(6)];
+             end
          end
 
          if do_mask
@@ -363,6 +374,9 @@ if(do_combine)
        subplot(221); title(['raw 1s estimates']);
        subplot(222); title(['raw 1s estimates']);
        print(gcf,['../pics/histograms-raw.png'],'-dpng','-r200','-painters')
+
+       figure(hfstrat)
+       print(gcf,['../pics/histograms-stratification.png'],'-dpng','-r200','-painters')
    end
 
    Turb.do_mask = do_mask;
