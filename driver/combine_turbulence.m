@@ -200,6 +200,9 @@ if(do_combine)
          if do_plot
              hfig = CreateFigure;
              Histograms(chi, hfig, normstr, 'raw');
+
+             if ~exist('hfraw', 'var'), hfraw = CreateFigure; end
+             Histograms(chi, hfraw, 'pdf', ID(5:end));
          end
 
          if do_mask
@@ -355,6 +358,11 @@ if(do_combine)
 
        print(gcf,['../pics/histograms-final.png'],'-dpng','-r200','-painters')
        savefig(gcf,['../pics/histograms-final.fig'])
+
+       figure(hfraw)
+       subplot(221); title(['raw 1s estimates']);
+       subplot(222); title(['raw 1s estimates']);
+       print(gcf,['../pics/histograms-raw.png'],'-dpng','-r200','-painters')
    end
 
    Turb.do_mask = do_mask;
