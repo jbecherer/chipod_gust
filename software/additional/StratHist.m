@@ -23,13 +23,15 @@ function [] = StratHist(hfig, chi, ID)
     xlabel('dTdz')
     xlim(cbins([find_approx(cdf, 0.05) find_approx(cdf, 0.85)]))
     legend('-dynamiclegend')
-    
+
     subplot(222)
-    histogram(chi.N2,  'DisplayStyle', 'stairs', ...
+    histogram(2*pi./sqrt(chi.N2(chi.N2 > 0))/60,  'DisplayStyle', 'stairs', ...
               'Normalization','pdf', 'DisplayName', legstr, ...
               'LineWidth', 1.5)
     hold on
-    xlabel('N2')
+    xlabel('Buoyancy period (2*\pi/N min)')
+    xlim([0 90])
+    set(gca, 'XTick', [0:5:90])
 
     subplot(223)
     histogram(log10(abs(1./chi.dTdz)),  'DisplayStyle', 'stairs', ...
