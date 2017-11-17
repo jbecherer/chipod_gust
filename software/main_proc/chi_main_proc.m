@@ -72,7 +72,9 @@ function [] = chi_main_proc(basedir, rfid, pflag, varargin)
             vel_m1 = vel_m;
             clear vel_m;
             [vel_m.time, vel_m.spd] = ...
-                chi_convert_vel_m_to_sensor_spd(vel_m1, data, pflag.master.use_compass);
+                chi_convert_vel_m_to_sensor_spd(vel_m1, data, ...
+                                                pflag.master.use_compass, ...
+                                                pflag.master.use_pres);
          else
             disp([fid ' does not exit']);
             disp('corresponding processing flags are switched off');

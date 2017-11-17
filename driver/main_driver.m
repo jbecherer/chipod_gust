@@ -58,6 +58,9 @@ addpath(genpath('./chipod_gust/software/'));% include  path to preocessing routi
     pflag.master.use_compass = 1; % if 0, assume chipod vane moves it
                                   % into the flow perfectly
 
+    pflag.master.use_pres = 0; % set to 0, accelerometers are
+                               % working, else differentiate
+                               % pressure to get speed past sensor
     pflag.master.parallel = 1;
 
    %---------------------get flag status----------------------

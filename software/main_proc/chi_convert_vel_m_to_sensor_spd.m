@@ -1,4 +1,5 @@
-function [spd_time, spd] = chi_convert_vel_m_to_sensor_spd(vel_m, data, use_compass)
+function [spd_time, spd] = ...
+    chi_convert_vel_m_to_sensor_spd(vel_m, data, use_compass, use_pres)
 %% [spd_time, spd] = chi_convert_vel_m_to_sensor_spd(vel_m, data, use_compass)
 %     This function converts mooring velocities (u,v) into 
 %     speeds passed the FP7 senaor for chipod processing
@@ -7,6 +8,7 @@ function [spd_time, spd] = chi_convert_vel_m_to_sensor_spd(vel_m, data, use_comp
 %        vel_m    : structure containing u,v,time
 %        data     : calibrated chipod/gust structure
 %     use_compass : If 0, assume chipod is vaned perfectly into the flow
+%      use_pres   : If 1, use p_vel_z instead of a_vel_z
 %
 %     OUTPUT
 %        spd_time : time array for the sensor speed (dt = 1s)
@@ -26,10 +28,14 @@ if ~exist('use_compass', 'var')
     use_compass = 1;
 end
 
+if ~exist('use_pres', 'var')
+    % use accelerometer by default
+    use_pres = 0;
+end
+
 % interplate on common time step
    u   = interp1(vel_m.time, vel_m.u, data.time, 'linear', NaN);
    v   = interp1(vel_m.time, vel_m.v, data.time, 'linear', NaN);
-   spd = interp1(vel_m.time, vel_m.spd, data.time, 'linear', NaN);
 
   if use_compass
       % more sophisticated use compass
@@ -38,14 +44,21 @@ end
       velx = u.*sin(cmp) + v.*cos(cmp);
       vely = u.*cos(cmp) + v.*sin(cmp);
   else
+      spd = interp1(vel_m.time, vel_m.spd, data.time, 'linear', NaN);
       % Simple assuption chipod is perfectly stired in the flow
       velx = -spd; % current comming opposed the sensor
       vely = zeros(size(velx));
   end
 
 % speed data
-spd      = sqrt( (data.a_vel_x-velx).^2 +(data.a_vel_y -vely).^2 +data.a_vel_z.^2 );
-   % note that the original routine also tokk rotation into acount as rate of change of compass
+if use_pres
+    spd = sqrt( velx.^2 + vely.^2  + data.p_vel_z.^2 );
+else
+    spd = sqrt( (data.a_vel_x-velx).^2 +(data.a_vel_y -vely).^2 ...
+                +data.a_vel_z.^2 );
+end
+
+% note that the original routine also tokk rotation into acount as rate of change of compass
 
 spd_time = data.time;
 

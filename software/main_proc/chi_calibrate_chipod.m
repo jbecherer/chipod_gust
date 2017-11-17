@@ -76,6 +76,8 @@ function [data] = chi_calibrate_chipod(rfid, head)
          % time sync
          chi.P = chi.P(1:Nt);
 
+          % integrate pressure sensor
+          [chi.p_dis_z, chi.p_vel_z] = integrate_pres(chi, head);
 
       
    % accelerometer
@@ -109,7 +111,26 @@ function [data] = chi_calibrate_chipod(rfid, head)
          chi.AYtilt=calibrate_tilt(rdat.AY,head.coef.AY);
          chi.AZtilt=calibrate_tilt(rdat.AZ,head.coef.AZ);
 
-   % compass
+          % compare AZ with dP/dt
+          % figure;
+          % subplot(121)
+          % histogram2(chi.a_vel_z, chi.p_vel_z, 'displaystyle', 'tile', ...
+          %            'normalization', 'pdf')
+          % axis square;
+          % xlabel('accel vel_z'); ylabel('pres vel_z')
+          % line45
+          % title(['PDF | r = ' ...
+          %        num2str(min(min(corrcoef(chi.a_vel_z, chi.p_vel_z))))])
+          % subplot(122)
+          % histogram2(chi.a_dis_z, chi.p_dis_z, 'displaystyle', ...
+          %            'tile', 'normalization', 'pdf')
+          % xlabel('accel disp_z'); ylabel('pres disp_z')
+          % title(['PDF | r = ' ...
+          %        num2str(min(min(corrcoef(chi.a_dis_z, chi.p_dis_z))))])
+          % axis square;
+          % line45
+
+         % compass
          chi.cmp = rdat.CMP/10+head.coef.CMP(1);
          % In case time_cmp is to long (sometimes its one index to long)
          if length(chi.cmp)< Ntc
