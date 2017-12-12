@@ -1,0 +1,76 @@
+\documentclass[12pt]{report}
+\usepackage{bookman}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ...
+\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{color}
+\usepackage{float}
+\usepackage{gensymb}
+\usepackage{amsmath}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\usepackage{fancyhdr}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{boxedminipage}
+\setlength{\hoffset}{-1in}
+\setlength{\voffset}{-1in}
+\setlength{\oddsidemargin}{1in}
+\setlength{\textwidth}{6.5in}
+\setlength{\evensidemargin}{1in}
+\setlength{\topmargin}{.75in}
+\setlength{\headheight}{.25in}
+\setlength{\headsep}{.25in}
+\setlength{\topskip}{0in}
+\setlength{\footskip}{.5in}
+\setlength{\textheight}{9in}
+\setlength{\parsep}{72pt}
+\setlength{\parindent}{0pt}
+\usepackage{hyperref}
+
+%\lhead[]{}      % Note the brackets!
+%\rhead[]{}
+%\lfoot[\thepage]{}
+%\rfoot[]{\thepage}
+\cfoot{}
+% \rhead{$\chi$POD COMPASS SUMMARY}
+\lhead{\thepage}
+
+\usepackage[small,normal,bf,up]{caption}
+\renewcommand{\captionfont}{\small\itshape}
+
+\setlength{\parskip}{3ex plus 0.5ex minus 0.2ex}
+\linespread{1}
+
+\usepackage{sidecap}
+\usepackage{float}
+
+
+\title{$\chi$pod and gusT processing package}
+\author{Johannes Becherer, Sally Warner, Deepak Cherian}
+\date{Last updated: December 11, 2017}
+
+\begin{document}
+\pagestyle{fancy}
+\maketitle
+
+\tableofcontents
+
+\part{Calibration}
+\input{compass}
+\input{pitot}
+
+\part{Processing}
+\input{predriver}
+\input{maindriver}
+\input{combine_turbulence}
+
+
+\part{Appendix}
+\input{matlabserver}
+\input{references}
+\input{git}
+\end{document}

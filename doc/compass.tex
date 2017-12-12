@@ -1,0 +1,171 @@
+\chapter{Compass}
+
+It can be confusing how the angles from the compass in $\chi$pods compare to flow direction, and how to ensure correct compass calibration. This document will cover the following:
+\begin{enumerate}
+\item How the compass is orientated within the $\chi$pod
+\item How to convert from $\chi$pod compass angle to flow angle
+\item How to include a compass offset
+\item How to include magnetic declinations
+\item Checking compass calibration with Pitot and ADCP
+\item Errors to be aware of
+\end{enumerate}
+
+\section{Compass orientation within the $\chi$pod}
+
+If the compass is placed correctly within the $\chi$pod, it will be orientated such that it points towards the sensor tips. Therefore, it will read 0\degree \, when the sensor tips are pointed northward. Figure \ref{fig:cmpveldiag} shows a diagram of how the compass is orientated within the $\chi$pod.
+
+\begin{figure}
+  \centering \centering\noindent\includegraphics[width=14cm,angle=0]{./figs/compass_and_velocity_diagram.pdf}\\
+    \caption{A perfectly installed compass should align with the sensors. The $\chi$pod vane will steer the sensors into the flow.}\label{fig:cmpveldiag}
+\end{figure}
+
+\clearpage
+
+
+\section{Converting from $\chi$pod compass to flow direction}
+
+Converting between compass angle and flow direction is confusing for 2 reasons:
+
+\begin{itemize}
+\item The compass uses heading orientation with north = 0\degree, and increasing clockwise such that east = 90\degree, south = 180\degree, and west = 270\degree \,= -90\degree. This is different from velocity for which we typically use vector notation with east = 0\degree, and angles increasing counterclockwise such that north = 90\degree, west = 180\degree, and south = 270\degree \,= -90\degree.
+\item Additionally, the sensors point \textit{toward} the flow so they indicate the direction the flow is \textit{coming from} not the direction to which it is going. Therefore, flow to the north would give a compass reading of 180\degree \, since the sensors would be pointed to the south. See Figure \ref{fig:cmpvelangles} for a complete comparison of angles.
+\end{itemize}
+
+
+\begin{figure}[h]
+  \centering \centering\noindent\includegraphics[width=12cm,angle=0]{./figs/compass_and_velocity_angles.pdf}\\
+    \caption{Angles of flow direction in vector notation (red) and the corresponding compass readings within the $\chi$pod. This assumes, of course, that the $\chi$pod sensors are vaned to face directly into the flow.}\label{fig:cmpvelangles}
+\end{figure}
+
+The formula that can be used to convert $\chi$pod compass angle to flow direction (in vector reference frame) is:
+\begin{equation}
+\theta_{flow} = -\left(\theta_{compass} + 90\degree\right)
+\end{equation}
+
+Alternatively, to convert from flow direction to compass:
+\begin{equation}
+\theta_{compass} = -\left(\theta_{flow} + 90\degree\right)
+\end{equation}
+
+\section{How to find the compass offset}
+When the $\chi$pods are built, the compass may not be put into the $\chi$pod casing precisely such that the compass points directly to the sensors. Therefore, the compass is calibrated prior to deployment so we know what the offset is between the sensor direction and the compass direction. To do this, the engineers take the $\chi$pod into the woods away from magnetic sources and point the sensors to the north. They wait a minute, then rotate the $\chi$pod 10\degree \,clockwise. They repeat this all the way around the circle until the $\chi$pod sensors are again pointing toward the north.
+
+Compass calibrations will be saved in a folder called something like ``/Calibrations/compass/'' within each $\chi$pod deployment folder. To view the compass calibrations:
+
+\begin{verbatim}
+% load compass calibration file, which would have a name like CMP_00000000.UNT
+[data, head] = raw_load_chipod('CMP_00000000.UNT');
+figure
+plot(data.CMP/10)
+\end{verbatim}
+
+This will create a figure that shows the compass calibrations (see Fig. \ref{fig:compasscals} for an example). There should be 37 steps of 10\degree \, increments. Use \texttt{ginput} to select the first and last values to get the offset between the sensor tips and the compass.
+
+\begin{figure}[h]
+  \centering \centering\noindent\includegraphics[width=12.5cm,angle=0]{./figs/compass_cals_727.pdf}\\
+    \caption{Data from $\chi$pod compass calibration. Compass angle in degrees between 0\degree \, and 360\degree \, on y-axis, unimportant time steps on x-axis. Use \texttt{ginput} to get first and last value. In this case, the offset was found to be 342.7\degree \, = -17.3\degree.}\label{fig:compasscals}
+\end{figure}
+
+
+To apply this offset to the header.mat calibration file, use the following commands in MATLAB. \texttt{UNT} is the unit number, \texttt{DIR} is the directory of the $\chi$pod processing which contains folders like calib, mfiles, input, proc, raw, etc., and \texttt{OFFSET} is the angle found using ginput from the compass calibration file. It is important to include the negative offset in the header file (head.mat) because this is the value that is \textit{added} to all of the compass readings.
+
+\begin{verbatim}
+% move to the correct directory
+    cd DIR
+% load the header file that includes all of the calibrations
+    load calib/header.mat
+% display the compass calibration which should be [0; 1; 0; 0; 0]
+    head.coef.CMP
+% add the offset to the header. **Input the NEGATIVE of OFFSET**
+    head.coef.CMP(1) = -OFFSET
+% save the updated header
+    save calib/header.mat head
+\end{verbatim}
+
+
+
+\section{How to include magnetic declinations}
+
+Magnetic declination arises because the magnetic field of the earth is not uniform. This is especially important in the Pacific Northwest: a compass pointing directly north will give a reading of about 15\degree \, east of north due to the large mass of the Cascade mountains to the east. Note that the magnetic declination changes slowly over time. This needs to be included in the compass calibrations!
+
+Look up the magnetic declinations in Corvallis where the instrument was calibrated and at the deployment location on the following website:
+\begin{verbatim}
+https://www.ngdc.noaa.gov/geomag-web/#declination
+\end{verbatim}
+In 2017, the magnetic declination in Corvallis was about 15\degree E (Fig. \ref{fig:declination}). The magnetic declination at 0\degree, 140\degree W, where many $\chi$pods are deployed is 9.3\degree.
+
+\begin{figure}
+  \centering \centering\noindent\includegraphics[width=14cm,angle=0]{./figs/declination_both.pdf}\\
+    \caption{The magnetic declination in Corvallis and at 0\degree, 140\degree W on December 1, 2017.}\label{fig:declination}
+\end{figure}
+
+Now, instead of just inputting the OFFSET into the header calibrations, you'll want to include the declinations. Repeat the steps in the previous section, but include the declinations:
+\begin{verbatim}
+% add the offset and declinations to the header
+    head.coef.CMP(1) = -OFFSET - DECL_CORVALLIS + DECL_DEPLOYMENT
+% don't forget to save the updated header
+    save calib/header.mat head
+\end{verbatim}
+
+For our example, the offset was -17.3\degree, the magnetic declination in Corvallis was 15.2\degree, and the magnetic declination at the deployment location was 9.3\degree. Therefore, we set the header coefficient to be 11.4\degree \, ($--17.3 - 15.2 + 9.3 = 11.4$).
+
+Alternately, within the $\chi$pod\_gust software, you can include the compass offset and magnetic declinations in \texttt{pre\_driver.m} (shown with example values input into code):
+\begin{verbatim}
+LINE 24      modify_header = 1;   % if 1, specify header corrections below
+LINE 25                           % (e.g. declination)
+LINE 26
+LINE 27      % get declination: https://www.ngdc.noaa.gov/geomag-web/#declination
+LINE 28      CompassOffset = -17.3; % exact value from calibration file
+LINE 29                           % (no sign changes!)
+LINE 30      DeployDecl = 9.3; % at deployment location
+LINE 31      CorvallisDecl = 15+10/60; % at corvallis
+...
+LINE 81      head.coef.CMP(1) = -CompassOffset - CorvallisDecl + DeployDecl;
+\end{verbatim}
+
+\clearpage
+\section{Checking compass calibrations with Pitot and ADCP}
+
+If you have ADCP data and the compass has been calibrated correctly, pitot derived velocities should match up very well with ADCP velocities. Fig. \ref{fig:pitotADCP} shows the output from \texttt{calibrate\_pitot}. Additonally, when \texttt{calibrate\_pitot} is run, an angle offset between the ADCP and pitot is printed to the screen. This should be small (i.e. $<5$\degree).
+
+\begin{figure}[h]
+  \centering \centering\noindent\includegraphics[width=14cm,angle=0]{./figs/Pitot_vs_ADCP_resized.png}\\
+    \caption{Output of \texttt{calibrate\_pitot} when the compass has been correctly calibrated. ADCP and pitot velocities match closely.}\label{fig:pitotADCP}
+\end{figure}
+
+\section{Errors to be aware of}
+
+There are a few problems that can arise.
+
+\subsection{Nonlinear compass calibrations}
+There have been a few cases where the compass calibrations look very nonlinear (e.g. Fig. \ref{fig:badcals}). In other words, the compass steps during the calibration are not all 10\degree. Some are as big as 50\degree, and many are $<5$\degree.
+
+To fix this, we did not use the compass calibration from Fig. \ref{fig:badcals}, which was 195.6\degree. Instead, we manually found the offset that got the compass direction to match the flow direction as measured by the ADCP (Fig. \ref{fig:findcompassoffset}). The new offset is found to be 91.4\degree. A big difference! This would not work as well in cases where the current was not uniformly flowing in one direction as it was for this $\chi$pod.
+
+\begin{figure}[h]
+  \centering \centering\noindent\includegraphics[width=12.5cm,angle=0]{./figs/compass_cals_730.png}\\
+    \caption{Example of bad compass calibrations. Not all steps are equal.}\label{fig:badcals}
+\end{figure}
+
+\begin{figure}[h]
+  \centering \centering\noindent\includegraphics[width=16cm,angle=0]{./figs/compare_ADCP_direction_to_compass.png}\\
+    \caption{Manually finding the compass offset that makes the compass match the ADCP. Flow direction from ADCP (black dots), compass readings in heading coordinates (gray dots), compass readings converted to vector coordinates (red), compass readings in vector coordinates with an offset of 91.37\degree \, applied.}\label{fig:findcompassoffset}
+\end{figure}
+
+\subsection{Bad comparison between ADCP and Pitot}
+Sometimes, the comparison between the ADCP and the pitot are just plain bad. This is somewhat hard to diagnose. Maybe the pitot goes bad. Try doing the calibration over a shorter period of time and look for jumps in the signal. Maybe the compass calibrations are bad, in which case trust the angle given in the ADCP vs pitot comparison.
+
+You can ignore the compass in the $\chi$pod processing by setting
+\begin{verbatim}
+pflag.master.use_compass = 0;
+\end{verbatim}
+in \texttt{main\_driver.m}. This will assume that the $\chi$pod is always perfectly vaned directly into the flow. When the compass is bad, the pitot will be able to give speed but not direction unless there is an ADCP to compare to.
+
+\subsection{Declinations already included in the calibration}
+
+There were some cases where the magnetic declination was being included in the compass calibrations. I'm not sure how this was being done. It's impossible to know whether they were or weren't included unless a note is added in the calibration folder. If you suspect this may be the case, (1) ask Pavan if he remembers how the compass was calibrated, (2) try adding and subtracting the declination in Corvallis to see if that helps, or just (3) use the ADCP to pitot comparisons to get the compass offset.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "docs"
+%%% End:
