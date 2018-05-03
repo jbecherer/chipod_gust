@@ -96,6 +96,14 @@ if exist(fname)
       TL.acc(2)   =  convert_timeStr2datenum( DB.chipods.acc_stop, tl_default(2));
       TL.cmp(2)   =  convert_timeStr2datenum( DB.chipods.cmp_stop, tl_default(2));
 
+      % there's no way the differentiator returns good data if the T sensor is bad
+      if TL.Tp1(2) > TL.T1(2)
+          TL.Tp1(2) = TL.T1(2);
+      end
+      if TL.Tp2(2) > TL.T2(2)
+          TL.Tp2(2) = TL.T2(2);
+      end
+
    else  % gust
 
       TL.T       =  TL.master;
@@ -108,6 +116,11 @@ if exist(fname)
       TL.pitot(2) =  convert_timeStr2datenum( DB.gust.pitot_stop, tl_default(2));
       TL.acc(2)   =  convert_timeStr2datenum( DB.gust.acc_stop, tl_default(2));
       TL.cmp(2)   =  convert_timeStr2datenum( DB.gust.cmp_stop, tl_default(2));
+
+      % there's no way the differentiator returns good data if the T sensor is bad
+      if TL.Tp(2) > TL.T(2)
+          TL.Tp(2) = TL.T(2);
+      end
 
    end
 

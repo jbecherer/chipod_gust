@@ -140,6 +140,14 @@ end
       TL.acc(2)   =  convert_timeStr2datenum( DB.chipods.acc_stop, tl_default(2));
       TL.cmp(2)   =  convert_timeStr2datenum( DB.chipods.cmp_stop, tl_default(2));
 
+      % there's no way the differentiator gives good data once the T sensor dies
+      if TL.Tp1(2) > TL.T1(2)
+          TL.Tp1(2) = TL.T1(2);
+      end
+      if TL.Tp2(2) > TL.T2(2)
+          TL.Tp2(2) = TL.T2(2);
+      end
+
    else  % gust
 
       TL.T       =  TL.master;
@@ -170,6 +178,10 @@ end
       TL.pitot(2) =  convert_timeStr2datenum( DB.gust.pitot_stop, tl_default(2));
       TL.acc(2)   =  convert_timeStr2datenum( DB.gust.acc_stop, tl_default(2));
       TL.cmp(2)   =  convert_timeStr2datenum( DB.gust.cmp_stop, tl_default(2));
+
+      if TL.Tp(2) > TL.T(2)
+          TL.Tp(2) = TL.T(2);
+      end
 
    end
 
