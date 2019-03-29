@@ -406,22 +406,22 @@ if(do_combine)
          [Turb.(ID), Turb.(ID).stats.max_Kt_percentage] = ApplyMask(Turb.(ID), Turb.(ID).Kt, '>', CP.max_Kt, 'max_Kt');
          [Turb.(ID), Turb.(ID).stats.max_Jq_percentage] = ApplyMask(Turb.(ID), abs(Turb.(ID).Jq), '>', CP.max_Jq, 'max_Jq');
             
-         if do_wda
-             % get list of all fields to average
-             ff = fields(chi.wda);
+         % if do_wda
+         %     % get list of all fields to average
+         %     ff = fields(chi.wda);
 
-             %% average data
-             % disp('WDA: Running moving average')
-             % wwwda = round(CP.avgwindow/(diff(chi.wda.time(1:2))*24*3600));
-             % tic;
-             % for f = 1:length(ff)  % run through all fields in chi
-             %     if ( length(chi.wda.(ff{f})) == length(chi.wda.time) )
-             %         Turb.(ID).wda.(ff{f}) = moving_average( chi.wda.(ff{f}), wwwda, wwwda , CP.avgvalid);
-             %     else
-             %         Turb.(ID).wda.(ff{f}) = chi.wda.(ff{f});
-             %     end
-             % end
-         end
+         %     average data
+         %     disp('WDA: Running moving average')
+         %     wwwda = round(CP.avgwindow/(diff(chi.wda.time(1:2))*24*3600));
+         %     tic;
+         %     for f = 1:length(ff)  % run through all fields in chi
+         %         if ( length(chi.wda.(ff{f})) == length(chi.wda.time) )
+         %             Turb.(ID).wda.(ff{f}) = moving_average( chi.wda.(ff{f}), wwwda, wwwda , CP.avgvalid);
+         %         else
+         %             Turb.(ID).wda.(ff{f}) = chi.wda.(ff{f});
+         %         end
+         %     end
+         % end
 
          if do_plot
              if ~exist('hfig2', 'var')
@@ -447,8 +447,8 @@ if(do_combine)
                  set(ax(5), 'ylim', [-1 1]*2000)
                  symlog(ax(2), 'y', -3);
                  symlog(ax(5), 'y', 1);
-                 print(gcf,[basedir '/pics/compare-wda-oc-' ID '.png'],'-dpng','-r200','-painters');
-                 if save_fig, savefig(gcf, [basedir '/pics/compare-wda-oc-' ID '.fig']); end
+                 print(hwda,[basedir '/pics/compare-wda-oc-' ID '.png'],'-dpng','-r200','-painters');
+                 if save_fig, savefig(hwda, [basedir '/pics/compare-wda-oc-' ID '.fig']); end
              end
 
          end
