@@ -71,12 +71,11 @@ if(do_combine)
 
          ID = d(i).name(5:mat_test-1);
          if ~CP.pflag.proc.(ID)
-             disp([ ID ' is disabled!']);
+             disp(sprintf(['\n' ID ' is disabled! \n']));
              continue;
          end
 
-         disp(' ');
-         disp(['----------> adding ' ID ]);
+         disp(sprintf(['\n----------> adding ' ID '\n']));
          clear chi;
          load([dirname 'chi_' ID '.mat'])
 
@@ -89,7 +88,7 @@ if(do_combine)
 
          CP = process_estimate_ID(CP, ID);
 
-         % do winters dasaro estimate?
+         % do we need to process winters dasaro estimate?
          do_wda = (exist(wdafile, 'file') || isfield(chi, 'wda')) ...
                   && ~contains(ID, 'ic') && CP.pflag.master.winters_dasaro;
 
@@ -97,6 +96,7 @@ if(do_combine)
          ww = round(CP.avgwindow/(diff(chi.time(1:2))*3600*24));
          dw = round(CP.deglitch_window/(diff(chi.time(1:2))*3600*24));
 
+         % truncate all fields to valid time range
          chi = truncate_time(chi, CP.time_range);
 
          try
@@ -108,11 +108,17 @@ if(do_combine)
              chi.S = 35*ones(size(chi.time));
          end
 
+         disp(['    ' num2str(sum(isnan(chi.chi))/length(chi.chi) * 100) ...
+               '% chi estimates are NaN before I truncate to valid time limits.'])
+
          % add nans when sensors die or glitch
          chi = add_nans(CP, chi);
 
          chi.Kt = 0.5 * chi.chi ./ chi.dTdz.^2;
          chi.Jq = -1025 .* 4200 .* chi.Kt .* chi.dTdz;
+
+         disp(['    ' num2str(sum(isnan(chi.chi))/length(chi.chi) * 100) ...
+               '% chi estimates are NaN before I start masking.'])
 
          % save unmasked chi structure for later use
          chiold = chi;
@@ -145,6 +151,9 @@ if(do_combine)
          end
 
          if do_mask
+
+             disp(sprintf('\n    ==== Now masking 1 sec averaged estimate.'))
+
              [spdmask, addspdmask] = determine_speed_masks(basedir, ID, CP, chi);
 
              if CP.mask_flushing
@@ -188,10 +197,11 @@ if(do_combine)
                  % deglitch chi and eps before calculating Jq and Kt
                  % not required for IC estimate because that is already
                  % an averaged estimate
-                 disp('Deglitch... itch... tch... ch')
                  tic;
+                 disp('    Deglitch log10(chi)...')
                  chi.chi = 10.^deglitch(log10(chi.chi), dw, CP.deglitch_nstd, 'b');
                  chi.eps(isnan(chi.chi)) = nan;
+                 disp('    Deglitch log10(eps)...')
                  chi.eps = 10.^deglitch(log10(chi.eps), dw, CP.deglitch_nstd, 'b');
                  chi.chi(isnan(chi.eps)) = nan;
                  toc;
@@ -220,8 +230,15 @@ if(do_combine)
                      shown_sensors_noise_floor = [];
                  end
 
+                 % estimate a mask for when chipod is close to noise floor
+                 %  - CP.factor_spec_floor is a fudge factor.
+                 %  - chi.spec_floor is an estimate of the spectral energy density when
+                 %    Tp is noise (estimated in chi_calibrate_chipod)
+                 %  - Multiply spec_floor by nfft to get area under noise spectrum
                  spec_floor_mask = chi.spec_area < CP.factor_spec_floor * spec_floor * nanmean(chi.nfft);
 
+                 % noise floor vary by sensor; make sure we aren't plotting
+                 % the same curve multiple times
                  do_spec_area = ~any(shown_sensors_noise_floor == CP.sensor);
                  make_noise_floor_histograms(ID, chi, hspec1, hspec2, hspec3, ...
                                              spec_floor, spec_floor_mask, do_spec_area)
@@ -259,11 +276,12 @@ if(do_combine)
              % obtain Kt, Jq using Winters & D'Asaro methodology
              if do_wda
                  ticwda = tic;
-                 disp('Processing Winters & D''Asaro estimate. Takes 120s for 1 year.');
+                 disp('    =================================================================')
+                 disp('    .... Processing Winters & D''Asaro estimate. Takes 120s for 1 year.');
                  if ~exist(wdafile, 'file') && isfield(chi, 'wda')
                      % backward compatibility
-                     disp(['    ' wdafile ' not found. \n' ...
-                           '     Using chi.wda to do Winters & D''Asaro estimate'])
+                     disp(['    ' wdafile ' not found. '])
+                     disp('     Using chi.wda to do Winters & D''Asaro estimate')
                      chi.wda = process_wda_estimate(chi, chi.wda);
                  else
                      if ~exist('Tz_w', 'var') & exist(wdafile, 'file')
@@ -328,6 +346,7 @@ if(do_combine)
                      shown_Tz = [shown_Tz 'w'];
                      StratHist(hfstrat, chi.wda, 'ww');
                  end
+                 disp('    =================================================================')
              end
 
              % dT/dz has to happen after I use chi to get Winters & D'Asaro
@@ -371,11 +390,14 @@ if(do_combine)
              ff = fields(chi);
 
              %% average data
-             disp('Running moving average')
+             disp(sprintf('\n    Running moving average'))
              tic;
              for f = 1:length(ff)  % run through all fields in chi
                  if ( length(chi.(ff{f})) == length(chi.time) )
-                     if strcmpi(ff{f}, 'Kt') | strcmpi(ff{f}, 'Jq'), continue; end
+                     % Kt, Jq are calculated with averaged chi, averaged dTdz later.
+                     if strcmpi(ff{f}, 'Kt') | strcmpi(ff{f}, 'Jq')
+                         continue;
+                     end
                      Turb.(ID).(ff{f}) = moving_average( chi.(ff{f}), ww, ww , CP.avgvalid);
                  else
                      Turb.(ID).(ff{f}) = chi.(ff{f});
@@ -386,6 +408,8 @@ if(do_combine)
              Turb.(ID) = chi;
          end
 
+         disp(sprintf(['\n    ==== Now masking ' num2str(CP.avgwindow) ...
+                       ' sec averaged estimate.']))
          % reapply dTdz filter
          % (because we divide by this dTdz for Kt, Jq)
          Turb.(ID) = ApplyMask(Turb.(ID), abs(Turb.(ID).dTdz), '<', CP.min_dTdz, 'avg dTdz');
@@ -436,8 +460,8 @@ if(do_combine)
                  hwda.Name = ['Compare Osborn-Cox vs. Winters-D''Asaro : ' ID];
                  tavg = 3600;
                  ax = plot_estimate(Turb.(ID), ID, tavg);
-                 % I want to plot eps calcluated from Kt without
-                 % over-complicating plot_estimat; which is set to plot the
+                 % I want to plot eps calculated from Kt without
+                 % over-complicating plot_estimate; which is set to plot the
                  % eps field.
                  wda_temp = Turb.(ID).wda;
                  wda_temp.eps = wda_temp.eps_Kt;
@@ -559,7 +583,7 @@ function [chi] = add_nans(CP, chi)
    if CP.sensor == 1 % sensor T1 or gusT T
        death = find(chi.time > CP.T1death, 1, 'first');
        if ~isempty(death)
-           disp(['NaNing out sensor T1 after it died on ' datestr(CP.T1death)])
+           disp(['    NaNing out sensor T1 after it died on ' datestr(CP.T1death)])
            chi.chi(death:end) = NaN;
            chi.eps(death:end) = NaN;
            chi.T(death:end) = NaN;
@@ -579,7 +603,7 @@ function [chi] = add_nans(CP, chi)
        if CP.sensor == 2 % sensor T2
            death = find(chi.time > CP.T2death, 1, 'first');
            if ~isempty(death)
-               disp(['NaNing out sensor T2 after it died on ' datestr(CP.T2death)])
+               disp(['    NaNing out sensor T2 after it died on ' datestr(CP.T2death)])
                chi.chi(death:end) = NaN;
                chi.eps(death:end) = NaN;
                chi.T(death:end) = NaN;
@@ -599,7 +623,7 @@ function [chi] = add_nans(CP, chi)
    if ~CP.isPitotEstimate
        death = find(chi.time > CP.adcpdeath, 1, 'first');
        if ~isempty(death)
-           disp(['NaNing out after mooring velocity died on ' datestr(CP.adcpdeath)]);
+           disp(['    NaNing out after mooring velocity died on ' datestr(CP.adcpdeath)]);
            chi.chi(death:end) = NaN;
            chi.eps(death:end) = NaN;
            chi.T(death:end) = NaN;
@@ -641,13 +665,13 @@ function [] = compare_min_dTdz_N2_against_SBE_specs(dz, CP, ID)
     sbe_N2 = 9.81 * (1.7e-4 * sbe_dTdz + 7.6e-4 * sbe_dSdz);
 
     if CP.min_dTdz < sbe_dTdz & ID(2) == 'm'
-        disp(['WARNING: min_dTdz ' num2str(CP.min_dTdz, '%.1e') ...
+        disp(['    WARNING: min_dTdz ' num2str(CP.min_dTdz, '%.1e') ...
               '< minimum resolvable based on ' ...
               'SBE-37 accuracy specifications ' ...
               num2str(sbe_dTdz, '%.1e')]);
     end
     if CP.min_N2 < sbe_N2 & ID(2) == 'm'
-        disp(['WARNING: min_N2 ' num2str(CP.min_N2, '%.1e') ...
+        disp(['    WARNING: min_N2 ' num2str(CP.min_N2, '%.1e') ...
               ' < minimum resolvable based on ' ...
               'SBE-37 accuracy specifications i.e. ' ...
               num2str(sbe_N2, '%.1e')]);
