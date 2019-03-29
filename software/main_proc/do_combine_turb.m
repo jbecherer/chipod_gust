@@ -134,9 +134,10 @@ if(do_combine)
                  shown_Tz = '';
              end
 
+             % If we haven't shown histograms of the current Tz estimate, do so.
              if isempty(strfind(shown_Tz, ID(2)))
                  StratHist(hfstrat, chi, ID);
-                 set(0, 'currentfigure', hfstrat); subplot(222);
+                 set(0, 'currentfigure', hfstrat); subplot(122);
                  hplt = plot(CP.avgwindow/60*[1, 1], ylim, 'k--');
                  legend(hplt, 'averaging window')
                  shown_Tz = [shown_Tz ID(2)];
