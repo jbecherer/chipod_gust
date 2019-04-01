@@ -28,7 +28,8 @@ function [] = StratHist(hfig, chi, ID)
     legend('-dynamiclegend')
 
     subplot(122)
-    histogram(2*pi./sqrt(chi.N2(chi.N2 > 0))/60,  'DisplayStyle', 'stairs', ...
+    histogram(2*pi./sqrt(chi.N2(chi.N2 > 0))/60,  'BinEdges', [0:1:90], ...
+              'DisplayStyle', 'stairs', ...
               'Normalization','pdf', 'DisplayName', legstr, ...
               'LineWidth', 1.5)
     hold on
@@ -36,6 +37,7 @@ function [] = StratHist(hfig, chi, ID)
     ylabel('pdf')
     xlim([0 90])
     set(gca, 'XTick', [0:5:90])
+    legend('-dynamiclegend')
 
     % subplot(223)
     % histogram(log10(abs(1./chi.dTdz)),  'DisplayStyle', 'stairs', ...

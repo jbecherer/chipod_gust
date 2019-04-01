@@ -143,8 +143,8 @@ if(do_combine)
              if isempty(strfind(shown_Tz, ID(2)))
                  StratHist(hfstrat, chi, ID);
                  set(0, 'currentfigure', hfstrat); subplot(122);
-                 hplt = plot(CP.avgwindow/60*[1, 1], ylim, 'k--');
-                 legend(hplt, 'averaging window')
+                 hplt = plot(CP.avgwindow/60*[1, 1], ylim, 'k--', ...
+                             'DisplayName', 'averaging window');
                  shown_Tz = [shown_Tz ID(2)];
              end
          end
@@ -466,10 +466,10 @@ if(do_combine)
                  wda_temp = Turb.(ID).wda;
                  wda_temp.eps = wda_temp.eps_Kt;
                  ax = plot_estimate(wda_temp, [ID 'wda'], tavg);
-                 legend(ax(3), '\epsilon_\chi', ['\epsilon = N^2/\Gamma wda.Kt'])
+                 legend(ax(3), '\epsilon_\chi', ['\epsilon = N^2/\Gamma wda.Kt']);
                  % reasonable ylimits
-                 set(ax(2), 'ylim', prctile(Turb.(ID).wda.dTdz, [1 99]))
-                 set(ax(5), 'ylim', prctile(Turb.(ID).Jq, [1 99]))
+                 set(ax(2), 'ylim', prctile(Turb.(ID).wda.dTdz, [1 99]));
+                 set(ax(5), 'ylim', prctile(Turb.(ID).Jq, [1 99]));
                  % maybe symmetric-log axes for dT/dz and Jq
                  maybe_symlog(ax(2), 'y', -3);
                  maybe_symlog(ax(5), 'y', 1);
@@ -497,15 +497,29 @@ if(do_combine)
           set(0, 'currentfigure', hfraw);
           subplot(221); title(['raw 1s estimates']);
           subplot(222); title(['raw 1s estimates']);
-          print(gcf,[basedir '/pics/histograms-raw.png'],'-dpng','-r200','-painters')
+          print(gcf, [basedir '/pics/histograms-raw.png'],'-dpng','-r200','-painters')
        end
 
        if exist('hfstrat', 'var')
-          print(hfstrat,[basedir '/pics/histograms-stratification.png'],'-dpng','-r200','-painters')
+          set(0, 'currentfigure', hfstrat);
+          ax = subplot(121);
+          prc = nan(length(ax.Children), 2);
+          for cc = 1:length(ax.Children)
+              try
+                  prc(cc, :) = prctile(ax.Children(cc).Data, [2, 98]);
+              catch ME
+                  continue
+              end
+          end
+          xlim = [nanmin(prc(:)) nanmax(prc(:))];
+          if all(~isnan(xlim)), ax.XLim = xlim; end
+          print(hfstrat, [basedir '/pics/histograms-stratification.png'], ...
+                '-dpng','-r200','-painters')
        end
 
        if exist('hspecfig', 'var')
-           print(hspecfig, [basedir '/pics/histograms-noise-floor.png'],'-dpng','-r200','-painters')
+           print(hspecfig, [basedir '/pics/histograms-noise-floor.png'], ...
+                 '-dpng','-r200','-painters')
        end
    end
 
