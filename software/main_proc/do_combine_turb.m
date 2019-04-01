@@ -466,15 +466,16 @@ if(do_combine)
                  wda_temp = Turb.(ID).wda;
                  wda_temp.eps = wda_temp.eps_Kt;
                  ax = plot_estimate(wda_temp, [ID 'wda'], tavg);
-                 legend(ax(3), '\epsilon_\chi', '\epsilon = N^2/\Gamma wda.Kt')
-                 % symmetric-log axes for dT/dz and Jq
-                 set(ax(5), 'ylim', [-1 1]*2000)
-                 symlog(ax(2), 'y', -3);
-                 symlog(ax(5), 'y', 1);
+                 legend(ax(3), '\epsilon_\chi', ['\epsilon = N^2/\Gamma wda.Kt'])
+                 % reasonable ylimits
+                 set(ax(2), 'ylim', prctile(Turb.(ID).wda.dTdz, [1 99]))
+                 set(ax(5), 'ylim', prctile(Turb.(ID).Jq, [1 99]))
+                 % maybe symmetric-log axes for dT/dz and Jq
+                 maybe_symlog(ax(2), 'y', -3);
+                 maybe_symlog(ax(5), 'y', 1);
                  print(hwda,[basedir '/pics/compare-wda-oc-' ID '.png'],'-dpng','-r200','-painters');
                  if save_fig, savefig(hwda, [basedir '/pics/compare-wda-oc-' ID '.fig']); end
              end
-
          end
          
          % include statistics (means and medians for each quantity)

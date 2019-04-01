@@ -126,7 +126,7 @@ for a = 1:5
         end
     end
     t = text_corner(ax(a), labelstr, 1);
-    set(ax(a), 'Yscale', 'log');    
+    set(ax(a), 'Yscale', yscale);
     ylim(ax(a), sort(yl));
     set(ax(a),'tickdir','out')
     datetick(ax(a), 'keeplimits');
@@ -139,17 +139,16 @@ for a = 1:5
         set(ax(a), 'XTickLabels', [])
         plot(ax(a), xlim ,[0 0], 'k-')
         set(gcf, 'currentaxes', ax(a))
-        symlog('y', -3);
     end
     if a ~= 5
         set(ax(a),'XTickLabel',{' '})
     end
-    set(ax(5),'YScale','linear')
 
 end
 
-linkaxes(ax, 'x');
+maybe_symlog(ax(4), 'y', -3);
 
+linkaxes(ax, 'x');
 
 %%%%%%%%%%%%%%%%% histograms %%%%%%%%%%%%%%%%%
 
