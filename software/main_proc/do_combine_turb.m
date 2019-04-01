@@ -124,19 +124,18 @@ if(do_combine)
          chiold = chi;
 
          if do_plot
-             hfig = CreateFigure(is_visible);
-             hfig.Name = ['Histograms: effect of masking for ' ID];
+             hfig = CreateFigure(is_visible, ['Histograms: effect of masking for ' ID]);
              Histograms(chi, hfig, CP.normstr, ID, 'raw');
 
              if ~exist('hfraw', 'var')
-                 hfraw = CreateFigure(is_visible);
-                 hfraw.Name = ['Histograms: compare different 1 sec estimates'];
+                 hfraw = CreateFigure(is_visible, 'Histograms: compare different 1 sec estimates');
              end
              Histograms(chi, hfraw, 'pdf', ID, ID);
 
              if ~exist('hfstrat', 'var')
-                 hfstrat = CreateFigure(is_visible);
-                 hfstrat.Name = ['Histograms: background stratification for ' ID];
+                 hfstrat = CreateFigure(is_visible, ...
+                                        ['Histograms: stratification estimates ' ...
+                                         'for ' ID]);
                  shown_Tz = '';
              end
 
@@ -220,7 +219,8 @@ if(do_combine)
                  end
 
                  if ~exist('hspecfig', 'var')
-                     hspecfig = CreateFigure(is_visible);
+                     hspecfig = CreateFigure(is_visible, ...
+                                             'Noise floor diagnostics');
                      hspecfig.Position(3) = 2000;
                      hspecfig.Position(4) = 1065;
                      hspec1 = subplot(2,2,[1,2]); hold on;
@@ -449,15 +449,15 @@ if(do_combine)
 
          if do_plot
              if ~exist('hfig2', 'var')
-                 hfig2 = CreateFigure(is_visible);
-                 hfig2.Name = ['Histograms: all final processed estimates'];
+                 hfig2 = CreateFigure(is_visible, ...
+                                      'Histograms: all final processed estimates');
              end
              Histograms(Turb.(ID), hfig2, 'pdf', ID, ID);
       
              if do_wda
                  Histograms(Turb.(ID).wda, hfig2, 'pdf', ID, [ID 'W&DA']);
-                 hwda = CreateFigure(is_visible);
-                 hwda.Name = ['Compare Osborn-Cox vs. Winters-D''Asaro : ' ID];
+                 hwda = CreateFigure(is_visible, ...
+                                     ['Compare Osborn-Cox vs. Winters-D''Asaro : ' ID]);
                  tavg = 3600;
                  ax = plot_estimate(Turb.(ID), ID, tavg);
                  % I want to plot eps calculated from Kt without

@@ -34,8 +34,8 @@ function [ax] = plot_estimate(chi, name, window, hfig, t0, t1)
         hfig = CreateFigure;
     end
 
-    if isempty(ax) | length(ax) ~= 5
-        clf(hfig);
+    if isempty(ax)
+        % clf(hfig);
         [ax, ~] = create_axes(hfig, 5, 1, 0);
     end
 
