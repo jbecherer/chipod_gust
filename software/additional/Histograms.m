@@ -5,6 +5,9 @@ function Histograms(chi, hfig, normstr, ID, legendtext)
     if ~exist('legendtext', 'var'), legendtext = ''; end
     if ~exist('hfig', 'var') | isempty(hfig), hfig = figure; end
 
+    ID = strrep(ID, '_', '-');
+    legendtext = strrep(legendtext, '_', '-');
+
     nbins = 300;
     chibins = linspace(-12, -1, nbins);
     epsbins = linspace(-12, 1, nbins);
@@ -79,6 +82,12 @@ function myhist(var, bins, normstr, ID, legendtext)
     elseif ~isempty(strfind(legendtext,'|Tz|'))
         color = [1 0 0];
         lw = 2;
+    elseif ~isempty(strfind(legendtext,'n_freq'))
+        color = [0 0 1];
+        lw = 2;
+    elseif ~isempty(strfind(legendtext, 'back flow'))
+        color = [0.5 0.5 0.5];
+        lw = 1;
     else
         color = choose_color(ID,'color');
         lw = choose_color(ID,'width');

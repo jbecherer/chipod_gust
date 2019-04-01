@@ -115,7 +115,7 @@ if(do_combine)
          chi.Jq = -1025 .* 4200 .* chi.Kt .* chi.dTdz;
 
          % save unmasked chi structure for later use
-         chiold = chi;
+         chi_pre_mask = chi;
 
          if do_plot
              hfig = CreateFigure(is_visible);
@@ -162,26 +162,26 @@ if(do_combine)
                  if do_plot, Histograms(chi, hfig, CP.normstr, (ID), 'volume flushed'); end
              end
 
-             [chi, percentage] = ApplyMask(chi, chi.N2, '<', CP.min_N2, 'N2');
-             chi.stats.N2_mask_percentage = percentage;
-             if percentage > 0.5
-                 perlabel = [' -' num2str(percentage, '%.1f') '%'];
-                 if do_plot, Histograms(chi, hfig, CP.normstr,(ID), ['N2' perlabel]); end
-             end
+             [chi, chi.stats.N2_mask_percentage, chi.masks.N2] = ApplyMask(...
+                 chi, chi.N2, '<', CP.min_N2, 'N2', ...
+                 [], nan, do_plot, hfig, ID, 'N2');
 
-             [chi, percentage] = ApplyMask(chi, chi.spd, '<', CP.min_inst_spd, 'inst speed');
-             chi.stats.inst_speed_mask_percentage = percentage;
-             [chi, percentage] = ApplyMask(chi, spdmask, '<', CP.min_spd, 'background flow');
-             chi.stats.background_flow_mask_percentage = percentage;
+             [chi, chi.stats.inst_speed_mask_percentage, chi.masks.inst_speed] = ApplyMask(...
+                 chi, chi.spd, '<', CP.min_inst_spd, ['inst speed (pumping + background)'], ...
+                 [], nan, do_plot, hfig, ID, 'inst spd');
+
+             [chi, chi.stats.background_flow_mask_percentage, chi.masks.back_flow] = ApplyMask(...
+                 chi, spdmask, '<', CP.min_spd, 'background flow', ...
+                 [], nan, do_plot, hfig, ID, 'back flow');
 
              if CP.additional_mask_spd ~= ''
-                 [chi, percentage] = ApplyMask(chi, addspdmask, '<', CP.min_spd, 'background flow');
-                 chi.stats.additional_background_flow_mask_percentage = percentage;
+                 [chi, chi.stats.additional_background_flow_mask_percentage, chi.masks.add_back_flow] = ApplyMask(...
+                     chi, addspdmask, '<', CP.min_spd, 'additional background flow mask');
              end
 
              % remove values greater than thresholds
-             [chi, chi.stats.max_chi_percentage] = ApplyMask(chi, chi.chi, '>', CP.max_chi, 'max_chi');
-             [chi, chi.stats.max_eps_percentage] = ApplyMask(chi, chi.eps, '>', CP.max_eps, 'max_eps');
+             [chi, chi.stats.max_chi_percentage, chi.masks.max_chi] = ApplyMask(chi, chi.chi, '>', CP.max_chi, 'max_chi');
+             [chi, chi.stats.max_eps_percentage, chi.masks.max_eps] = ApplyMask(chi, chi.eps, '>', CP.max_eps, 'max_eps');
 
              if isempty(ic_test)
                  % deglitch chi and eps before calculating Jq and Kt
@@ -201,7 +201,10 @@ if(do_combine)
                  if ~isfield(chi, 'time_floor')
                      spec_floor = nanmedian(chi.spec_floor);
                  else
-                     if length(chi.time_floor)>1
+                     if length(chi.time_floor) > 1
+                        % make sure we cover the beginning and end
+                        chi.time_floor(1) = chi.time(1);
+                        chi.time_floor(end) = nanmax(chi.time);
                         spec_floor = interp1(chi.time_floor, chi.spec_floor, chi.time);
                      else
                         spec_floor = chi.spec_floor;
@@ -226,9 +229,9 @@ if(do_combine)
                                              spec_floor, spec_floor_mask, do_spec_area)
                  if do_spec_area, shown_sensors_noise_floor = [shown_sensors_noise_floor, CP.sensor]; end
 
-                 [chi, chi.stats.spec_floor_percentage] = ApplyMask(chi, ...
-                                                                   spec_floor_mask & isnan(chi.chi), '=', 1, ...
-                                                                   'spec_floor', [], CP.noise_floor_fill_value);
+                 [chi, chi.stats.spec_floor_percentage, chi.masks.noise_floor] = ApplyMask( ...
+                     chi, spec_floor_mask & isnan(chi.chi), '=', 1, ['Is Tp at noise floor? spec_floor_mask'], ...
+                     [], CP.noise_floor_fill_value, do_plot, hfig, ID, 'spec floor');
              end
 
              % filter out bad fits using fitting statistics
@@ -237,24 +240,26 @@ if(do_combine)
              if ~contains(ID, '_ic')
                  if exist(statsname, 'file')
                      load(statsname);
+                     % truncate + add nans for sensor deaths as for chi
                      stats = truncate_time(stats, CP.time_range);
+                     stats = mask_all_fields(stats, isnan(chi_pre_mask.chi));
                      assert(isequal(stats.time, chi.time));
 
-                     [chi, chi.stats.nfreq_percentage] = ...
-                         ApplyMask(chi, stats.n_freq, '<', CP.min_n_freq, 'min n_freq');
+                     [chi, chi.stats.nfreq_percentage, chi.masks.min_n_freq] = ApplyMask( ...
+                         chi, stats.n_freq, '<', CP.min_n_freq, 'number of points in final fitting range, n_freq', ...
+                         [], nan, do_plot, hfig, ID, 'n_freq');
 
                      if CP.mask_ic_fits
-                         [chi, chi.stats.ic_fit_percentage] = ...
-                             ApplyMask(chi, stats.k_stop < stats.ki, '=', 1, ...
-                                       'fully IC fit');
-                         perlabel = [' -' num2str(chi.stats.nfreq_percentage + chi.stats.ic_fit_percentage, '%.1f') '%'];
-                         if do_plot, Histograms(chi, hfig, CP.normstr, (ID), ['bad fits' perlabel]); end
+                         [chi, chi.stats.ic_fit_percentage, chi.masks.ic_fit] = ApplyMask(...
+                             chi, stats.k_stop < stats.ki, '=', 1, ['IC fit for a VC estimate, kstop < ki'], ...
+                             [], nan, do_plot, hfig, ID, 'IC fit');
                      end
-
                  else
-                     disp(['Combined stats file does not exist. Cannot filter out bad fits.'])
+                     disp(['    >>> Combined stats file does not exist. Cannot ' ...
+                           'filter out bad fits.<<< '])
                  end
              end
+
              % obtain Kt, Jq using Winters & D'Asaro methodology
              if do_wda
                  ticwda = tic;
@@ -331,10 +336,9 @@ if(do_combine)
 
              % dT/dz has to happen after I use chi to get Winters & D'Asaro
              % estimates of Kt, Jq!
-             [chi, percentage] = ApplyMask(chi, abs(chi.dTdz), '<', CP.min_dTdz, 'Tz');
-             chi.stats.dTdz_mask_percentage = percentage;
-             perlabel = [' -' num2str(percentage, '%.1f') '%'];
-             if do_plot, Histograms(chi, hfig, CP.normstr, (ID), ['|Tz| > ' num2str(CP.min_dTdz, '%.1e') perlabel]); end
+             [chi, chi.stats.dTdz_mask_percentage, chi.masks.dTdz] = ApplyMask(...
+                 chi, abs(chi.dTdz), '<', CP.min_dTdz, 'Tz', [], nan, ...
+                 do_plot, hfig, ID, ['|Tz| > ' num2str(CP.min_dTdz, '%.1e')]);
 
              % additional Tz masking?
              if CP.additional_mask_dTdz ~= ''
@@ -344,12 +348,9 @@ if(do_combine)
                  end
 
                  Tzmask = interp1(Tz.time, Tz.Tz, chi.time);
-                 [chi, percentage] = ApplyMask(chi, abs(Tzmask), '<', 1e-4, ...
-                                               ['Additional Tz_' CP.additional_mask_dTdz]);
-                 chi.stats.additional_dTdz_mask_percentage = percentage;
-                 perlabel = [' -' num2str(percentage, '%.1f') '%'];
-                 if do_plot, Histograms(chi, hfig, CP.normstr, (ID), ...
-                                        ['Additional Tz_' CP.additional_mask_dTdz perlabel]); end
+                 [chi, chi.stats.additional_dTdz_mask_percentage, chi.masks.additional_dTdz] = ApplyMask(...
+                     chi, abs(Tzmask), '<', 1e-4, ['Additional Tz_' CP.additional_mask_dTdz], ...
+                     [], nan, do_plot, hfig, ID, ['|Tz| > ' num2str(CP.min_dTdz, '%.1e')]);
              end
 
              if do_plot
@@ -380,7 +381,25 @@ if(do_combine)
                      Turb.(ID).(ff{f}) = chi.(ff{f});
                  end
              end
+
+             % To prevent confusion, set masks to 0 when chi was NaN
+             % *before masking* i.e. use chi_pre_mask.
+             chi.masks = mask_all_fields(chi.masks, isnan(chi_pre_mask.chi));
+
+             disp(sprintf('    Summing up masks...'))
+             tic;
+             ff = fields(chi.masks);
+             for f = 1:length(ff)
+                 Turb.(ID).masks.(ff{f}) = moving_sum(chi.masks.(ff{f}), ww, ww);
+             end
              toc;
+
+             if do_plot
+                 plot_masking_timeseries(Turb.(ID), ID, is_visible);
+                 print(gcf, [basedir '/pics/mask-timeseries-' ID '.png'], ...
+                       '-dpng','-r200','-painters');
+                 if save_fig, savefig(hwda, [basedir '/pics/mask-timeseries-' ID '.fig']); end
+             end
          else
              Turb.(ID) = chi;
          end
@@ -390,9 +409,8 @@ if(do_combine)
          Turb.(ID) = ApplyMask(Turb.(ID), abs(Turb.(ID).dTdz), '<', CP.min_dTdz, 'avg dTdz');
 
          % Tz (min_dTdz)-crossing filter
-         Tz_min_cross = generate_min_dTdz_crossing_mask(Turb.(ID).dTdz, ...
-                                                        CP.min_dTdz, 0);
-         Turb.(ID) = ApplyMask(Turb.(ID), Tz_min_cross, '=', 1, 'min_Tz crossing');
+         Tz_min_cross = generate_min_dTdz_crossing_mask(Turb.(ID).dTdz, CP.min_dTdz, 0);
+         Turb.(ID) = ApplyMask(Turb.(ID), Tz_min_cross, '=', 1, '|Tz| going below threshold');
 
          % recalculate using averaged quantities
          % if we average over a time period greater than
@@ -481,6 +499,10 @@ if(do_combine)
        if exist('hspecfig', 'var')
            print(hspecfig, [basedir '/pics/histograms-noise-floor.png'],'-dpng','-r200','-painters')
        end
+
+       Turb.(ID).stats.readme = ['percentage of total 1 sec points NaN-ed out by a ' ...
+                                 'particular mask'];
+       Turb.(ID).masks.readme = 'Number of 1 sec points NaN-ed out by a particular mask';
    end
 
    Turb.hash = githash(['driver' filesep 'combine_turbulence.m']);
@@ -800,6 +822,22 @@ function [] = make_noise_floor_histograms(ID, chi, hspec1, hspec2, hspec3, ...
     legend(hspec3, '-dynamiclegend')
     xlabel(hspec3, 'log_{10} \epsilon')
     ylabel(hspec3, 'count')
+
+end
+
+function [structure] = mask_all_fields(structure, mask)
+% masks all fields in 'structure' with 'mask'.
+% the 'time' field is excluded
+
+    ff = fieldnames(structure);
+    for f = 1:length(ff)
+        if strcmp(ff{f}, 'time'), continue; end
+        if islogical(structure.(ff{f}))
+            structure.(ff{f})(mask) = 0;
+        else
+            structure.(ff{f})(mask) = nan;
+        end
+    end
 
 end
 
