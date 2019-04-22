@@ -208,6 +208,50 @@ if(do_combine)
                  toc;
              end
 
+             % buoyancy reynolds diagnostic for weak turbulence
+             Reb = chi.eps ./ sw_visc(chi.S, chi.T, CP.depth) ./ chi.N2;
+             % plot a histogram of Reb
+             if do_plot
+                 if ~exist('hreb', 'var'),
+                     hweakfig = CreateFigure(...
+                         is_visible, ['How weak is your turbulence? ' ...
+                                      'Ask buoyancy reynolds number.']);
+                     hreb = gca;
+                     hold(hreb, 'on')
+                     xlabel(hreb, 'log_{10} Re_b = log_{10} (\epsilon/(\nuN^2))')
+                     ylabel(hreb, 'PDF')
+                     for criteria=[7, 19, 200]
+                         plot(hreb, log10(criteria)*[1, 1], hreb.YLim, 'k-', ...
+                              'handlevisibility', 'off')
+                     end
+                     htxt = text(hreb, 0.65, 0.2, ...
+                                 {'Re_b Critera:',
+                                  '',
+                                  'Shi et al (2005): < 7 (molecular)'
+                                  'Itsweire et al (1993) < 19 (no overturning)',
+                                  'Gargett et al (1984): > 200 (definitely isotropic)'}, ...
+                                 'Units', 'normalized', 'FontSize', 13);
+                 end
+                 H = histogram(hreb, log10(Reb), 'Normalization', 'pdf', ...
+                               'DisplayName', ID, 'DisplayStyle', 'stairs');
+                 legend(hreb, '-dynamiclegend')
+                 ylim(hreb, [0, 1.2 * max(H.Values)])
+             end
+
+             % For weak turbulence we want KT, Jq -> molecular.
+             % There is no overturning turbulence. So I set chi to 0;
+             % but eps can be whatever it is.
+             % Save backup eps here and restore it later.
+             % eps_backup = chi.eps;
+             % [chi, chi.stats.reb_percentage, chi.masks.reb] = ApplyMask( ...
+             %     chi, Reb, '<', 20, ...
+             %     'Weak turbulence; buoyancy reynolds number', ...
+             %     [], CP.noise_floor_fill_value, do_plot, hfig, ID, 'Re_b');
+             % disp('        Undoing Re_b masking of eps (shouldn''t be NaN).')
+             % chi.eps = eps_backup;
+             % clear eps_backup
+
+             % noise floor diagnostic
              if isempty(ic_test) & isfield(chi, 'spec_area') & isfield(chi, 'spec_floor')
                  % account for two possible versions of the code
                  if ~isfield(chi, 'time_floor')
@@ -544,6 +588,15 @@ if(do_combine)
            print(fig_noise_floor.fig, [basedir '/pics/histograms-noise-floor.png'], ...
                  '-dpng','-r200','-painters')
        end
+
+       if exist('hweakfig', 'var')
+           print(hweakfig, [basedir '/pics/buoyancy-reynolds.png'], ...
+                 '-dpng', '-r200', '-painters')
+       end
+
+       Turb.(ID).stats.readme = ['percentage of total 1 sec points NaN-ed out by a ' ...
+                                 'particular mask'];
+       Turb.(ID).masks.readme = 'Number of 1 sec points NaN-ed out by a particular mask';
    end
 
    Turb.hash = githash(['driver' filesep 'combine_turbulence.m']);

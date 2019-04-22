@@ -15,6 +15,7 @@ function plot_masking_timeseries(estimate, label, is_visible)
         if strcmpi(f, 'dTdz') | strcmpi(f, 'N2'), axplot = ax(1); end
         if strcmpi(f, 'inst_speed') | strcmpi(f, 'back_flow'), axplot = ax(2); end
         if strcmpi(f, 'noise_floor') | strcmpi(f, 'min_n_freq'), axplot = ax(3); end
+        if strcmpi(f, 'reb'), axplot = ax(3); end
         if strcmpi(f, 'ic_fit') | ~isempty(strfind(f, 'max_')), axplot = ax(4); end
 
         plot(axplot, estimate.time, estimate.masks.(f), ...
